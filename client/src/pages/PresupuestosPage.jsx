@@ -1,8 +1,10 @@
 // pages/PresupuestosPage.jsx — Página del módulo de presupuestos
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
 import BudgetForm from '../components/BudgetForm';
+import { generarPDF } from '../utils/pdfGenerator';
 
 const ESTATUS_BADGE = {
   borrador:  'badge-borrador',
@@ -29,13 +31,25 @@ export default function PresupuestosPage() {
   const { data: presData, loading: loadingLista, refetch } = useFetch('/api/presupuestos', {}, false);
   const presupuestos = presData?.data || [];
   
-  const [loadingAccion, setLoadingAccion] = useState(null); // id del presupuesto en acción
-  const [toast, setToast]               = useState(null);
+  const { data: configData } = useFetch('/api/config');
+  const configEmpresa = configData?.data || null;
 
-  const showToast = (msg, tipo = 'success') => {
-    setToast({ msg, tipo });
-    setTimeout(() => setToast(null), 4000);
+  const [loadingAccion, setLoadingAccion] = useState(null); // id del presupuesto en acción
+  const [expandedId, setExpandedId] = useState(null); // ID del presupuesto expandido en móvil
+
+  const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
+
+  const exportarPDF = async (p) => {
+    toastSuccess('Generando PDF...');
+    const formParams = { ...p, fecha_inicio: p.created_at };
+    const totales = { lineasCalculadas: p.lineas || [], totalUSD: p.total_usd };
+    try {
+      await generarPDF(formParams, totales, null, configEmpresa);
+    } catch (err) {
+      toastError('Error generando PDF');
+    }
   };
+
 
   useEffect(() => {
     if (vista === 'lista') refetch(true);
@@ -50,11 +64,11 @@ export default function PresupuestosPage() {
         const msg = data.proyecto_creado
           ? `Aprobado. Proyecto "${data.proyecto_creado.nombre_proyecto}" creado automáticamente en Proyectos.`
           : `Estatus actualizado a "${nuevoEstatus}".`;
-        showToast(msg);
+        toastSuccess(msg);
         refetch(true);
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error al actualizar estatus', 'error');
+      toastError(err.response?.data?.message || 'Error al actualizar estatus');
     } finally {
       setLoadingAccion(null);
     }
@@ -68,20 +82,21 @@ export default function PresupuestosPage() {
         setVista('nuevo');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error al cargar presupuesto', 'error');
+      toastError(err.response?.data?.message || 'Error al cargar presupuesto');
     }
   };
 
   const eliminarPresupuesto = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este presupuesto? Esta acción no se puede deshacer.')) return;
+    const isConfirmed = await confirmAction('¿Eliminar presupuesto?', 'Esta acción no se puede deshacer.');
+    if (!isConfirmed) return;
     try {
       const { data } = await axios.delete(`/api/presupuestos/${id}`);
       if (data.success) {
-        showToast('Presupuesto eliminado correctamente.');
+        toastSuccess('Presupuesto eliminado correctamente.');
         refetch(true);
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error al eliminar', 'error');
+      toastError(err.response?.data?.message || 'Error al eliminar');
     }
   };
 
@@ -89,7 +104,7 @@ export default function PresupuestosPage() {
   if (vista === 'nuevo') {
     return (
       <div>
-        <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => { setVista('lista'); setPresupuestoEdit(null); }}>
             ← Volver
           </button>
@@ -115,27 +130,11 @@ export default function PresupuestosPage() {
 
   return (
     <div>
-      {/* Toast notification */}
-      {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 20, zIndex: 2000,
-          background: toast.tipo === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-          border: `1px solid ${toast.tipo === 'error' ? 'var(--accent-red)' : 'var(--accent-green)'}`,
-          color: toast.tipo === 'error' ? 'var(--accent-red)' : 'var(--accent-green)',
-          padding: '12px 20px', borderRadius: 'var(--radius-md)',
-          fontWeight: 600, fontSize: 14,
-          boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-          animation: 'fadeIn 0.2s ease',
-          maxWidth: 440,
-          lineHeight: 1.5,
-        }}>
-          {toast.msg}
-        </div>
-      )}
+
 
       <style>{`@keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }`}</style>
 
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h2>Presupuestos</h2>
           <p>Gestiona y genera presupuestos para tus clientes.</p>
@@ -150,7 +149,7 @@ export default function PresupuestosPage() {
       </div>
 
       {/* Stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -211,89 +210,140 @@ export default function PresupuestosPage() {
                 <tr>
                   <th>N° Presupuesto</th>
                   <th>Cliente</th>
-                  <th>Proyecto</th>
+                  <th className="hide-on-mobile">Proyecto</th>
                   <th>Total USD</th>
-                  <th>Tasa</th>
-                  <th>Estatus</th>
-                  <th>Fecha</th>
-                  <th style={{ textAlign: 'center' }}>Acciones</th>
+                  <th className="hide-on-mobile">Tasa</th>
+                  <th className="hide-on-mobile">Estatus</th>
+                  <th className="hide-on-mobile">Fecha</th>
+                  <th className="hide-on-mobile" style={{ textAlign: 'center' }}>Acciones</th>
+                  <th className="show-on-mobile" style={{ width: 40 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {presupuestos.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <span style={{ fontFamily: 'monospace', color: 'var(--accent-blue)', fontWeight: 600 }}>
-                        {p.numero_presupuesto}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{p.cliente_nombre || '—'}</div>
-                      {p.cliente_rif && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.cliente_rif}</div>
-                      )}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', maxWidth: 200 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.proyecto_descripcion || '—'}
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                      {fmtUSD(p.total_usd)}
-                    </td>
-                    <td style={{ color: 'var(--accent-gold)', fontSize: 13 }}>
-                      {p.tasa_cambio_usd_bs} Bs
-                    </td>
-                    <td>
-                      <span className={`badge ${ESTATUS_BADGE[p.estatus] || 'badge-borrador'}`}>
-                        {ESTATUS_LABEL[p.estatus] || p.estatus}
-                      </span>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                      {new Date(p.created_at).toLocaleDateString('es-VE')}
-                    </td>
-                    {/* ── Acciones de Workflow ── */}
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => editarPresupuesto(p.id)}
-                          style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px' }}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => eliminarPresupuesto(p.id)}
-                          style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px', color: 'var(--accent-red)' }}
-                        >
-                          Eliminar
-                        </button>
-                        {(p.estatus === 'borrador' || p.estatus === 'enviado') && (
+                  <React.Fragment key={p.id}>
+                    <tr className="table-row-clickable" onClick={() => toggleExpand(p.id)}>
+                      <td data-label="N° Presupuesto">
+                        <span style={{ fontFamily: 'monospace', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                          {p.numero_presupuesto}
+                        </span>
+                      </td>
+                      <td data-label="Cliente">
+                        <div style={{ fontWeight: 600 }}>{p.cliente_nombre || '—'}</div>
+                        {p.cliente_rif && (
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.cliente_rif}</div>
+                        )}
+                      </td>
+                      <td data-label="Proyecto" className="hide-on-mobile" style={{ color: 'var(--text-secondary)', maxWidth: 200 }}>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.proyecto_descripcion || '—'}
+                        </div>
+                      </td>
+                      <td data-label="Total USD" style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        {fmtUSD(p.total_usd)}
+                      </td>
+                      <td data-label="Tasa" className="hide-on-mobile" style={{ color: 'var(--accent-gold)', fontSize: 13 }}>
+                        {p.tasa_cambio_usd_bs} Bs
+                      </td>
+                      <td data-label="Estatus" className="hide-on-mobile">
+                        <span className={`badge ${ESTATUS_BADGE[p.estatus] || 'badge-borrador'}`}>
+                          {ESTATUS_LABEL[p.estatus] || p.estatus}
+                        </span>
+                      </td>
+                      <td data-label="Fecha" className="hide-on-mobile" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                        {new Date(p.created_at).toLocaleDateString('es-VE')}
+                      </td>
+                      {/* ── Acciones de Workflow ── */}
+                      <td data-label="Acciones" className="hide-on-mobile" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <button
-                            className="btn btn-success btn-sm"
-                            title="Aprobar y crear Proyecto automáticamente"
-                            disabled={loadingAccion === p.id}
-                            onClick={() => cambiarEstatus(p.id, 'aprobado')}
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => editarPresupuesto(p.id)}
                             style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px' }}
                           >
-                            {loadingAccion === p.id
-                              ? <span className="spinner" style={{ width: 14, height: 14 }} />
-                              : 'Aprobar'}
+                            Editar
                           </button>
-                        )}
-                        {p.estatus === 'aprobado' && (
-                          <span style={{
-                            fontSize: 12, color: 'var(--accent-green)', fontWeight: 600,
-                            padding: '4px 8px', background: 'rgba(16,185,129,0.1)',
-                            borderRadius: 'var(--radius-md)',
-                          }}>
-                            Proyecto creado
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => exportarPDF(p)}
+                            style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px', color: 'var(--accent-cyan)' }}
+                          >
+                            PDF
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => eliminarPresupuesto(p.id)}
+                            style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px', color: 'var(--accent-red)' }}
+                          >
+                            Eliminar
+                          </button>
+                          {(p.estatus === 'borrador' || p.estatus === 'enviado') && (
+                            <button
+                              className="btn btn-success btn-sm"
+                              title="Aprobar y crear Proyecto automáticamente"
+                              disabled={loadingAccion === p.id}
+                              onClick={() => cambiarEstatus(p.id, 'aprobado')}
+                              style={{ fontSize: 12, fontWeight: 600, padding: '4px 8px' }}
+                            >
+                              {loadingAccion === p.id
+                                ? <span className="spinner" style={{ width: 14, height: 14 }} />
+                                : 'Aprobar'}
+                            </button>
+                          )}
+                          {p.estatus === 'aprobado' && (
+                            <span style={{
+                              fontSize: 12, color: 'var(--accent-green)', fontWeight: 600,
+                              padding: '4px 8px', background: 'rgba(16,185,129,0.1)',
+                              borderRadius: 'var(--radius-md)',
+                            }}>
+                              Proyecto creado
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="show-on-mobile" style={{ textAlign: 'right' }}>
+                        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: expandedId === p.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-muted)' }}>
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </td>
+                    </tr>
+                    
+                    {/* Fila expandible (solo móvil) */}
+                    <tr className={`expandable-content ${expandedId === p.id ? 'expanded' : ''}`}>
+                      <td colSpan="10" style={{ padding: 0, border: 'none' }}>
+                        <div className="expandable-details">
+                          <div className="detail-item">
+                            <span className="detail-label">Proyecto</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{p.proyecto_descripcion || '—'}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Tasa</span>
+                            <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{p.tasa_cambio_usd_bs} Bs</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Estatus</span>
+                            <span className={`badge ${ESTATUS_BADGE[p.estatus] || 'badge-borrador'}`}>
+                              {ESTATUS_LABEL[p.estatus] || p.estatus}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Fecha</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{new Date(p.created_at).toLocaleDateString('es-VE')}</span>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => editarPresupuesto(p.id)} style={{ flex: 1, justifyContent: 'center' }}>Editar</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => exportarPDF(p)} style={{ flex: 1, justifyContent: 'center', color: 'var(--accent-cyan)' }}>PDF</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => eliminarPresupuesto(p.id)} style={{ flex: 1, justifyContent: 'center', color: 'var(--accent-red)' }}>Eliminar</button>
+                            {(p.estatus === 'borrador' || p.estatus === 'enviado') && (
+                              <button className="btn btn-success btn-sm" disabled={loadingAccion === p.id} onClick={() => cambiarEstatus(p.id, 'aprobado')} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
+                                {loadingAccion === p.id ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Aprobar Presupuesto'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

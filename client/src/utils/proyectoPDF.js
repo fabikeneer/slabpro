@@ -1,240 +1,253 @@
-// utils/proyectoPDF.js — Generador de Ficha de Proyecto PDF
+// utils/proyectoPDF.js — Generador de Ficha de Proyecto PDF (Diseño Profesional Borcelle)
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const RIF_EMPRESA     = 'J-12345678-9';
-const NOMBRE_EMPRESA  = 'Marmolería SlabPro';
-const TELEFONO_EMPRESA = '0412-0000000';
-const EMAIL_EMPRESA   = 'info@slabpro.com';
+const C = {
+  black:       [30, 30, 30],
+  gold:        [254, 183, 44],
+  lightGold:   [251, 202, 91],
+  textPrimary: [40, 40, 40],
+  textMuted:   [100, 100, 100],
+  white:       [255, 255, 255],
+  line:        [220, 220, 220]
+};
 
-const fmtUSD = (n) => `$${Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
-const fmtBs  = (n) => `Bs. ${Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+const fmtUSD = (n) => `$ ${Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtBs  = (n) => `Bs. ${Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtFecha = (d) => {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 
-const ESTADO_COLORS = {
-  'Activo':     [16, 185, 129],   // verde
-  'En Proceso': [59, 130, 246],   // azul
-  'Terminado':  [100, 116, 139],  // gris
-};
-
-export function generarFichaProyectoPDF({ proyecto, pagos, resumen }) {
+export function generarFichaProyectoPDF({ proyecto, pagos, resumen, configEmpresa }) {
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W    = doc.internal.pageSize.getWidth();
   const H    = doc.internal.pageSize.getHeight();
-  const M    = 18;   // margen
+  const M    = 20;   // Margen
   let y      = M;
 
-  // ── Encabezado ───────────────────────────────────────────────────────────
-  doc.setFillColor(10, 15, 30);
-  doc.rect(0, 0, W, 48, 'F');
+  // ── 1. Formas Decorativas Superiores (Inspiración Borcelle) ──
+  // Triángulo negro fondo
+  doc.setFillColor(...C.black);
+  doc.triangle(W - 130, 0, W, 65, W, 0, 'F');
+  // Triángulo dorado principal
+  doc.setFillColor(...C.gold);
+  doc.triangle(W - 120, 0, W, 50, W, 0, 'F');
+  // Pequeño acento naranja/dorado oscuro
+  doc.setFillColor(230, 150, 20);
+  doc.triangle(W - 70, 0, W, 35, W, 0, 'F');
 
-  doc.setTextColor(241, 245, 249);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text(NOMBRE_EMPRESA, M, 18);
-
-  doc.setFontSize(9);
-  doc.setTextColor(148, 163, 184);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`RIF: ${RIF_EMPRESA}`, M, 27);
-  doc.text(`Tel: ${TELEFONO_EMPRESA}  |  ${EMAIL_EMPRESA}`, M, 33);
-
-  // Badge estatus
-  const estadoColor = ESTADO_COLORS[proyecto.estatus] || [100, 116, 139];
-  doc.setFillColor(...estadoColor);
-  doc.roundedRect(W - M - 60, 8, 60, 30, 4, 4, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FICHA DE PROYECTO', W - M - 30, 18, { align: 'center' });
-  doc.setFontSize(10);
-  doc.text(proyecto.estatus || '—', W - M - 30, 27, { align: 'center' });
-
-  y = 56;
-
-  // ── ID + Nombre del Proyecto ──────────────────────────────────────────────
-  doc.setFillColor(26, 34, 54);
-  doc.roundedRect(M, y, W - M * 2, 32, 3, 3, 'F');
-
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`PROYECTO #${proyecto.id_proyecto}`, M + 6, y + 8);
-
-  doc.setTextColor(241, 245, 249);
-  doc.setFontSize(14);
-  doc.text(proyecto.nombre_cliente || '—', M + 6, y + 18);
-
-  doc.setFontSize(9);
-  doc.setTextColor(148, 163, 184);
-  doc.setFont('helvetica', 'normal');
-  const fechaIni  = fmtFecha(proyecto.fecha_inicio);
-  const fechaEmit = fmtFecha(new Date());
-  doc.text(`Inicio: ${fechaIni}`, M + 6, y + 26);
-  doc.text(`Generado: ${fechaEmit}`, W - M - 6, y + 26, { align: 'right' });
-
-  y += 40;
-
-  // ── Datos del Cliente ─────────────────────────────────────────────────────
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'F');
-  doc.setDrawColor(30, 58, 95);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'S');
-
-  doc.setTextColor(59, 130, 246);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CLIENTE', M + 6, y + 8);
-
-  doc.setTextColor(241, 245, 249);
-  doc.setFontSize(12);
-  doc.text(proyecto.nombre_cliente || '—', M + 6, y + 17);
-
-  doc.setFontSize(9);
-  doc.setTextColor(148, 163, 184);
-  doc.setFont('helvetica', 'normal');
-  if (proyecto.rif_cedula) doc.text(`RIF/Cédula: ${proyecto.rif_cedula}`, M + 6, y + 26);
-  if (proyecto.tasa_bcv)   doc.text(`Tasa BCV: Bs. ${Number(proyecto.tasa_bcv).toFixed(2)}`, W - M - 6, y + 26, { align: 'right' });
-
-  y += 44;
-
-  // ── Descripción de la Obra ────────────────────────────────────────────────
-  if (proyecto.descripcion_obra) {
-    doc.setTextColor(148, 163, 184);
-    doc.setFontSize(8);
+  // ── 2. Logo e Información de Empresa (Top Left) ──
+  if (configEmpresa?.logo_data) {
+    try {
+      doc.addImage(configEmpresa.logo_data, 'PNG', M, 15, 35, 20, undefined, 'FAST');
+    } catch (e) {
+      console.warn('Error renderizando logo:', e);
+      doc.setTextColor(...C.textPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text((configEmpresa?.nombre_empresa || 'Marmolería Maracay').toUpperCase(), M, 25);
+    }
+  } else {
+    doc.setTextColor(...C.textPrimary);
     doc.setFont('helvetica', 'bold');
-    doc.text('DESCRIPCIÓN DE LA OBRA', M, y + 4);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(200, 210, 225);
-    doc.setFontSize(9);
-    const lines = doc.splitTextToSize(proyecto.descripcion_obra, W - M * 2);
-    doc.text(lines, M, y + 11);
-    y += 11 + lines.length * 5 + 6;
+    doc.setFontSize(14);
+    doc.text((configEmpresa?.nombre_empresa || 'Marmolería Maracay').toUpperCase(), M, 25);
   }
 
-  // ── Monto Presupuestado ───────────────────────────────────────────────────
-  const panelW = 110;
-  const panelX = W - M - panelW;
-
-  doc.setFillColor(26, 34, 54);
-  doc.roundedRect(panelX, y, panelW, 22, 3, 3, 'F');
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(9);
+  // Nombre de Empresa (al lado del logo si hay espacio)
+  doc.setTextColor(...C.textPrimary);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  const nombreEmpresa = configEmpresa?.nombre_empresa || 'Marmolería Maracay';
+  doc.text(nombreEmpresa, M + 40, 22);
+  
   doc.setFont('helvetica', 'normal');
-  doc.text('Monto Presupuestado:', panelX + 5, y + 9);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(59, 130, 246);
-  doc.text(fmtUSD(proyecto.monto_total), panelX + panelW - 5, y + 14, { align: 'right' });
-
-  y += 30;
-
-  // ── Tabla de Pagos de Nómina ──────────────────────────────────────────────
-  doc.setTextColor(148, 163, 184);
   doc.setFontSize(8);
+  doc.setTextColor(...C.textMuted);
+  doc.text(`RIF: ${configEmpresa?.rif || 'J-12345678-9'}`, M + 40, 27);
+  doc.text(configEmpresa?.telefono || '0412-0000000', M + 40, 32);
+
+  // ── 3. Título Principal ──
+  y = 65;
+  doc.setTextColor(...C.black);
   doc.setFont('helvetica', 'bold');
-  doc.text('RESUMEN DE PAGOS DE NÓMINA', M, y);
+  doc.setFontSize(32);
+  doc.text('Ficha de Proyecto', M, y);
+
+  // ── 4. Información del Cliente y Proyecto ──
+  y += 15;
+  doc.setFontSize(10);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.black);
+  doc.text('Cliente:', M, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C.textPrimary);
+  doc.text(proyecto.nombre_cliente || '—', M + 18, y);
+
   y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.black);
+  doc.text('Fecha:', M, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C.textPrimary);
+  doc.text(fmtFecha(proyecto.fecha_inicio), M + 18, y);
+
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.black);
+  doc.text('Estatus:', M, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C.textPrimary);
+  doc.text(proyecto.estatus || '—', M + 18, y);
+
+  y += 6;
+  if (proyecto.descripcion_obra) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Obra:', M, y);
+    doc.setFont('helvetica', 'normal');
+    const obraLines = doc.splitTextToSize(proyecto.descripcion_obra, W - M * 2 - 18);
+    doc.text(obraLines, M + 18, y);
+    y += obraLines.length * 5;
+  }
+
+  y += 15;
+
+  // ── 5. Tabla Minimalista (Estilo Borcelle) ──
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Pagos Registrados', M, y);
+  doc.text('Monto', W - M - 20, y);
+  
+  // Línea divisoria gruesa
+  y += 3;
+  doc.setDrawColor(...C.black);
+  doc.setLineWidth(0.6);
+  doc.line(M, y, W - M, y);
 
   if (pagos && pagos.length > 0) {
     const tableData = pagos.map(p => [
-      fmtFecha(p.fecha_pago),
-      p.trabajador || '—',
-      p.rol        || '—',
-      p.concepto   || '—',
-      fmtUSD(p.monto_usd),
-      fmtBs(p.monto_bs),
+      {
+        content: `Fecha: ${fmtFecha(p.fecha_pago)}\nConcepto: ${p.concepto || '—'}\nTrabajador: ${p.trabajador || '—'}`,
+        styles: { cellPadding: { top: 6, bottom: 6 } }
+      },
+      {
+        content: fmtUSD(p.monto_usd),
+        styles: { halign: 'right', fontStyle: 'bold', fontSize: 14, valign: 'middle' }
+      }
     ]);
 
     autoTable(doc, {
-      startY: y,
-      head: [['Fecha', 'Trabajador', 'Rol', 'Concepto', 'Monto USD', 'Monto Bs']],
+      startY: y + 2,
       body: tableData,
       margin: { left: M, right: M },
+      theme: 'plain',
       styles: {
         font: 'helvetica',
-        fontSize: 8,
-        cellPadding: 3,
-        textColor: [200, 210, 230],
-        fillColor: [26, 34, 54],
+        fontSize: 9,
+        textColor: C.textPrimary,
       },
-      headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 7,
-      },
-      alternateRowStyles: { fillColor: [15, 23, 42] },
       columnStyles: {
-        0: { cellWidth: 26 },
-        4: { halign: 'right', fontStyle: 'bold' },
-        5: { halign: 'right', textColor: [245, 158, 11] },
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 40 },
       },
+      didDrawCell: (data) => {
+        // Dibujar línea sutil debajo de cada fila
+        if (data.row.index < tableData.length - 1 && data.column.index === 0) {
+          doc.setDrawColor(...C.line);
+          doc.setLineWidth(0.2);
+          doc.line(M, data.cell.y + data.cell.height, W - M, data.cell.y + data.cell.height);
+        }
+      }
     });
-
     y = doc.lastAutoTable.finalY + 8;
   } else {
-    doc.setFillColor(15, 23, 42);
-    doc.roundedRect(M, y, W - M * 2, 18, 3, 3, 'F');
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('No hay pagos de nómina registrados para este proyecto.', W / 2, y + 11, { align: 'center' });
-    y += 26;
+    y += 15;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(...C.textMuted);
+    doc.text('No hay pagos registrados para este proyecto.', W / 2, y, { align: 'center' });
+    y += 15;
   }
 
-  // ── Panel de Resumen de Costos ────────────────────────────────────────────
-  doc.setFillColor(10, 15, 30);
-  doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'F');
-  doc.setDrawColor(...estadoColor);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'S');
+  // ── 6. Totales ──
+  // Línea divisoria gruesa
+  doc.setDrawColor(...C.black);
+  doc.setLineWidth(0.6);
+  doc.line(M, y, W - M, y);
+  y += 10;
 
-  const col = (W - M * 2) / 2;
-
-  // Col 1: Total Pagos
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Total Pagos Registrados', M + col * 0 + col / 2, y + 10, { align: 'center' });
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.setTextColor(241, 245, 249);
-  doc.text(String(resumen?.total_pagos || 0), M + col * 0 + col / 2, y + 22, { align: 'center' });
+  doc.setTextColor(...C.black);
+  doc.text('Presupuestado', W - M - 60, y, { align: 'right' });
+  doc.setFontSize(18);
+  doc.text(fmtUSD(proyecto.monto_usd), W - M, y, { align: 'right' });
 
-  // Col 2: Costo MOD
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(8);
+  y += 10;
+  doc.setFontSize(14);
+  doc.text('Costo Acumulado', W - M - 60, y, { align: 'right' });
+  doc.setFontSize(18);
+  doc.text(fmtUSD(resumen?.costo_mano_obra_usd || 0), W - M, y, { align: 'right' });
+
+  // ── 7. Firma ──
+  y += 35;
+  // Solo dibujar firma si hay espacio en la página
+  if (y > H - 60) {
+    doc.addPage();
+    y = M + 20;
+  }
+  
+  // Línea de firma
+  doc.setDrawColor(...C.black);
+  doc.setLineWidth(0.4);
+  doc.line(M, y, M + 60, y);
+  y += 6;
   doc.setFont('helvetica', 'normal');
-  doc.text('Costo Acumulado Mano de Obra', M + col * 1 + col / 2, y + 10, { align: 'center' });
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(16, 185, 129);
-  doc.text(fmtUSD(resumen?.costo_mano_obra_usd || 0), M + col * 1 + col / 2, y + 22, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setTextColor(...C.black);
+  doc.text(configEmpresa?.nombre_empresa || 'Marmolería Maracay', M, y);
 
-  y += 44;
-
-  // ── Pie de página ─────────────────────────────────────────────────────────
+  // ── 8. Footer (Inspiración Borcelle) ──
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFillColor(10, 15, 30);
-    doc.rect(0, H - 10, W, 10, 'F');
-    doc.setTextColor(71, 85, 105);
-    doc.setFontSize(7);
-    doc.text(
-      `${NOMBRE_EMPRESA}  |  RIF: ${RIF_EMPRESA}  |  Generado el ${new Date().toLocaleString('es-VE')}`,
-      W / 2, H - 4, { align: 'center' }
-    );
-    doc.text(`Pág. ${i} / ${pageCount}`, W - M, H - 4, { align: 'right' });
+    
+    // Formas decorativas inferiores
+    const footerY = H - 35;
+    
+    // Franja dorada fina encima del footer
+    doc.setFillColor(...C.gold);
+    doc.rect(0, footerY - 2, W, 2, 'F');
+    
+    // Fondo oscuro del footer
+    doc.setFillColor(...C.black);
+    doc.rect(0, footerY, W, 35, 'F');
+
+    // Triángulo dorado abajo derecha
+    doc.setFillColor(...C.gold);
+    doc.triangle(W - 80, H, W, footerY - 15, W, H, 'F');
+    doc.setFillColor(230, 150, 20);
+    doc.triangle(W - 40, H, W, footerY + 5, W, H, 'F');
+
+    doc.setTextColor(...C.white);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Información de contacto', M, footerY + 10);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    const emailInfo = configEmpresa?.email || 'contacto@empresa.com';
+    const telInfo = configEmpresa?.telefono || '0412-0000000';
+    const dirInfo = configEmpresa?.direccion || 'Maracay, Aragua';
+    
+    doc.text(`Email: ${emailInfo}`, M, footerY + 18);
+    doc.text(`Teléfono: ${telInfo}`, M + 60, footerY + 18);
+    doc.text(`Dirección: ${dirInfo}`, M, footerY + 24);
   }
 
-  // ── Guardar ───────────────────────────────────────────────────────────────
+  // ── Guardar ──
   const safe = (proyecto.nombre_proyecto || 'Proyecto').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]/g, '').trim();
   doc.save(`Ficha_Proyecto_${safe}_${Date.now()}.pdf`);
 }

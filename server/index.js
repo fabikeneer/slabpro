@@ -8,6 +8,9 @@ const clientesRouter     = require('./routes/clientes');
 const nominaRouter       = require('./routes/nomina');
 const proyectosRouter    = require('./routes/proyectos');
 const gastosRouter       = require('./routes/gastos');
+const authRouter         = require('./routes/authRoutes');
+const dashboardRouter    = require('./routes/dashboard');
+const configRouter       = require('./routes/config.routes');
 const exchangeRateService = require('./services/exchangeRate');
 
 const app  = express();
@@ -19,8 +22,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Rutas ───────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -32,6 +35,9 @@ app.use('/api/clientes',     clientesRouter);
 app.use('/api/nomina',       nominaRouter);
 app.use('/api/proyectos',    proyectosRouter);
 app.use('/api/gastos',       gastosRouter);
+app.use('/api/auth',         authRouter);
+app.use('/api/dashboard',    dashboardRouter);
+app.use('/api/config',       configRouter);
 
 app.get('/api/exchange-rate', (req, res) => {
   res.json(exchangeRateService.getRate());
@@ -55,8 +61,8 @@ app.use((err, req, res, next) => {
 
 // ── Iniciar servidor ────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`🚀 SlabPro Server corriendo en http://localhost:${PORT}`);
-  console.log(`📋 Endpoints disponibles:`);
+  console.log(`[INFO] SlabPro Server corriendo en http://localhost:${PORT}`);
+  console.log(`[INFO] Endpoints disponibles:`);
   console.log(`   GET  http://localhost:${PORT}/api/health`);
   console.log(`   GET  http://localhost:${PORT}/api/presupuestos`);
   console.log(`   POST http://localhost:${PORT}/api/presupuestos`);

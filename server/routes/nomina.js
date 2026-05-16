@@ -7,6 +7,8 @@ const db = require('../db');
     try { await db.query(`ALTER TABLE empleados CHANGE COLUMN id_empleado id INT(11) NOT NULL AUTO_INCREMENT`); } catch(e) {}
     try { await db.query(`ALTER TABLE empleados ADD COLUMN cedula_rif VARCHAR(50) DEFAULT NULL AFTER nombre`); } catch(e) {}
     try { await db.query(`ALTER TABLE empleados CHANGE COLUMN cargo rol VARCHAR(255) DEFAULT NULL`); } catch(e) {}
+    // Agregar columna estado
+    try { await db.query(`ALTER TABLE empleados ADD COLUMN estado ENUM('Activo', 'Inactivo') DEFAULT 'Activo'`); } catch(e) {}
     // Agregar columna beneficiario para pagos externos
     try { await db.query(`ALTER TABLE pagos_nomina ADD COLUMN beneficiario VARCHAR(255) DEFAULT NULL`); } catch(e) {}
 })();
@@ -112,8 +114,8 @@ router.get('/reporte', async (req, res) => {
 // GET /api/nomina/empleados
 router.get('/empleados', async (req, res) => {
     try {
-        // En caso de que la migración no haya sido tan rápida o algo, tratamos de pedir los campos.
-        const [rows] = await db.query('SELECT * FROM empleados ORDER BY nombre ASC');
+        // Solo devolvemos los empleados con estado 'Activo'
+        const [rows] = await db.query("SELECT * FROM empleados WHERE estado = 'Activo' ORDER BY nombre ASC");
         res.json(rows);
     } catch (error) {
         console.error('Error obteniendo empleados:', error);
@@ -154,21 +156,12 @@ router.put('/empleados/:id', async (req, res) => {
 // DELETE /api/nomina/empleados/:id
 router.delete('/empleados/:id', async (req, res) => {
     try {
-        // Regla de Negocio: No permitir eliminar un empleado con pagos registrados
-        const [pagos] = await db.query('SELECT id_pago FROM pagos_nomina WHERE id_empleado = ? LIMIT 1', [req.params.id]);
-        if (pagos.length > 0) {
-            return res.status(400).json({ error: 'No se puede eliminar: El empleado tiene pagos registrados.' });
-        }
-
-        await db.query('DELETE FROM empleados WHERE id = ?', [req.params.id]);
+        // En lugar de eliminar físicamente, cambiamos el estado a Inactivo (Soft Delete)
+        await db.query("UPDATE empleados SET estado = 'Inactivo' WHERE id = ?", [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         console.error('Error eliminando empleado:', error);
-        // Si por alguna razón hay una restricción de clave foránea a nivel de base de datos
-        if (error.code === 'ER_ROW_IS_REFERENCED_2') {
-            return res.status(400).json({ error: 'No se puede eliminar: El empleado está referenciado en otros registros.' });
-        }
-        res.status(500).json({ error: 'Error al eliminar empleado' });
+        res.status(500).json({ error: 'Error al cambiar el estado del empleado a inactivo' });
     }
 });
 

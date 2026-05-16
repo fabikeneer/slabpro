@@ -1,11 +1,12 @@
 // pages/ProyectosPage.jsx — Con pestañas: Proyectos + Presupuestos
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useFetch } from '../hooks/useFetch';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { generarFichaProyectoPDF } from '../utils/proyectoPDF';
+import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 
 registerLocale('es', es);
 
@@ -23,11 +24,11 @@ const FORM_INIT = { nombre_proyecto:'', nombre_cliente:'',rif_cedula:'',descripc
 function Modal({ titulo, onClose, children }) {
   useEffect(()=>{ const f=(e)=>{ if(e.key==='Escape') onClose(); }; window.addEventListener('keydown',f); return ()=>window.removeEventListener('keydown',f); },[onClose]);
   return (
-    <div style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:24}} onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'var(--radius-xl)',padding:32,width:'100%',maxWidth:560,boxShadow:'0 25px 60px rgba(0,0,0,0.6)',maxHeight:'90vh',overflowY:'auto'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
-          <h3 style={{fontSize:20,fontWeight:800}}>{titulo}</h3>
-          <button onClick={onClose} style={{background:'rgba(148,163,184,0.1)',border:'none',color:'var(--text-muted)',borderRadius:'50%',width:32,height:32,cursor:'pointer',fontSize:20,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+    <div className="modal-overlay" onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3 className="modal-title">{titulo}</h3>
+          <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         {children}
       </div>
@@ -109,21 +110,26 @@ export default function ProyectosPage() {
   // Custom Hook para peticiones en segundo plano (SRP)
   const { data: proyData, loading: loadingProy, refetch: refetchProy } = useFetch('/api/proyectos');
   const { data: presData, loading: loadingPres, refetch: refetchPres } = useFetch('/api/presupuestos');
+  const { data: configData } = useFetch('/api/config');
   
   const proyectos = proyData?.data || [];
   const presupuestos = presData?.data || [];
+  const configEmpresa = configData?.data || null;
 
   const [loadingForm,  setLoadingForm]  = useState(false);
-  const [loadingPDF,   setLoadingPDF]   = useState(false);
+  const [loadingPDF,   setLoadingPDF]   = useState(null);
   const [filtroEstatus,setFiltroEstatus]= useState('Todos');
   const [filtroPres,   setFiltroPres]   = useState('Todos');
   const [selectedId,   setSelectedId]   = useState(null);
   const [modalNuevo,   setModalNuevo]   = useState(false);
   const [modalEditar,  setModalEditar]  = useState(null);
   const [form,         setForm]         = useState(FORM_INIT);
-  const [toast,        setToast]        = useState(null);
+  const [expandedProyId, setExpandedProyId] = useState(null);
+  const [expandedPresId, setExpandedPresId] = useState(null);
 
-  const showToast = (msg,tipo='success') => { setToast({msg,tipo}); setTimeout(()=>setToast(null),3500); };
+  const toggleProyExpand = (id) => setExpandedProyId(expandedProyId === id ? null : id);
+  const togglePresExpand = (id) => setExpandedPresId(expandedPresId === id ? null : id);
+
 
   const proyectosFiltrados = filtroEstatus==='Todos' ? proyectos : proyectos.filter(p=>p.estatus===filtroEstatus);
   const presFiltrados = filtroPres==='Todos' ? presupuestos : presupuestos.filter(p=>p.estatus===filtroPres);
@@ -135,35 +141,51 @@ export default function ProyectosPage() {
     finalizados:proyectos.filter(p=>p.estatus==='Finalizado').length,
   };
 
-  const handleCrear = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.post('/api/proyectos',form); if(data.success){showToast(data.message);setModalNuevo(false);setForm(FORM_INIT);refetchProy(true);} }catch(err){showToast(err.response?.data?.message||'Error','error');} finally{setLoadingForm(false);} };
+  const handleCrear = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.post('/api/proyectos',form); if(data.success){toastSuccess(data.message);setModalNuevo(false);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
 
   const abrirEditar = (p)=>{ setForm({nombre_proyecto:p.nombre_proyecto||'',nombre_cliente:p.nombre_cliente||'',rif_cedula:p.rif_cedula||'',descripcion_obra:p.descripcion_obra||'',estatus:p.estatus||'Activo',fecha_inicio:p.fecha_inicio?new Date(p.fecha_inicio).toISOString().split('T')[0]:new Date().toISOString().split('T')[0],monto_usd:p.monto_usd||''}); setModalEditar(p); };
 
-  const handleEditar = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.put(`/api/proyectos/${modalEditar.id_proyecto}`,form); if(data.success){showToast('Proyecto actualizado');setModalEditar(null);setForm(FORM_INIT);refetchProy(true);} }catch(err){showToast(err.response?.data?.message||'Error','error');} finally{setLoadingForm(false);} };
+  const handleEditar = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.put(`/api/proyectos/${modalEditar.id_proyecto}`,form); if(data.success){toastSuccess('Proyecto actualizado');setModalEditar(null);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
 
-  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await axios.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); showToast(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch{ showToast('Error al cambiar estado','error'); } };
+  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await axios.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); toastSuccess(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch{ toastError('Error al cambiar estado'); } };
 
-  const eliminarProyecto = async(p)=>{ if(!window.confirm(`¿Eliminar proyecto "${p.nombre_proyecto||p.nombre_cliente}"?`)) return; try{ const {data}=await axios.delete(`/api/proyectos/${p.id_proyecto}`); if(data.success){showToast('Eliminado');if(selectedId===p.id_proyecto)setSelectedId(null);refetchProy(true);} }catch(err){showToast(err.response?.data?.message||'Error','error');} };
+  const eliminarProyecto = async(p)=>{ const isConfirmed = await confirmAction('¿Eliminar proyecto?', `¿Estás seguro de eliminar el proyecto "${p.nombre_proyecto||p.nombre_cliente}"?`); if(!isConfirmed) return; try{ const {data}=await axios.delete(`/api/proyectos/${p.id_proyecto}`); if(data.success){toastSuccess('Eliminado');if(selectedId===p.id_proyecto)setSelectedId(null);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} };
 
-  const exportarPDF = async()=>{ if(!selectedId) return; setLoadingPDF(true); try{ const {data}=await axios.get(`/api/proyectos/${selectedId}/ficha`); if(data.success){generarFichaProyectoPDF(data.data);showToast('PDF generado');} }catch{showToast('Error PDF','error');} finally{setLoadingPDF(false);} };
+  const exportarPDF = async (proyectoId) => {
+    if (!proyectoId) return;
+    setLoadingPDF(proyectoId);
+    try {
+      const { data } = await axios.get(`/api/proyectos/${proyectoId}/ficha`);
+      if (data.success) {
+        generarFichaProyectoPDF({ ...data.data, configEmpresa });
+        toastSuccess('Ficha PDF generada correctamente');
+      }
+    } catch {
+      toastError('Error al generar el PDF. Verifica la conexión.');
+    } finally {
+      setLoadingPDF(null);
+    }
+  };
 
   return (
     <div>
       <style>{`
-        .prow{cursor:pointer;transition:background .15s;} .prow.sel td{background:rgba(59,130,246,0.08)!important;} .prow:hover td{background:rgba(59,130,246,0.04);}
+        .prow{cursor:pointer;transition:background .15s;}
         .fpill{padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .18s;background:transparent;color:var(--text-secondary);}
-        .fpill:hover{background:rgba(148,163,184,0.08);color:var(--text-primary);} .fpill.act{background:rgba(59,130,246,0.15);color:var(--accent-blue);border-color:rgba(59,130,246,0.3);}
+        .fpill:hover{background:rgba(254,183,44,0.08);color:var(--text-primary);}
+        .fpill.act{background:rgba(254,183,44,0.14);color:var(--primary-dark);border-color:rgba(254,183,44,0.35);}
         .estsel{background:transparent;border:none;color:inherit;font-size:11px;font-weight:700;cursor:pointer;outline:none;font-family:inherit;}
         @keyframes tIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+        .btn-pdf{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(254,183,44,0.35);background:rgba(254,183,44,0.10);color:var(--primary-dark);transition:all .18s;white-space:nowrap;}
+        .btn-pdf:hover:not(:disabled){background:rgba(254,183,44,0.22);border-color:var(--primary);}
+        .btn-pdf:disabled{opacity:0.5;cursor:not-allowed;}
       `}</style>
 
-      {toast&&<div style={{position:'fixed',top:20,right:20,zIndex:9999,background:toast.tipo==='error'?'rgba(239,68,68,0.15)':'rgba(16,185,129,0.15)',border:`1px solid ${toast.tipo==='error'?'var(--accent-red)':'var(--accent-green)'}`,color:toast.tipo==='error'?'var(--accent-red)':'var(--accent-green)',padding:'12px 20px',borderRadius:'var(--radius-md)',fontWeight:600,fontSize:14,maxWidth:440,boxShadow:'0 8px 30px rgba(0,0,0,0.4)',animation:'tIn .2s ease'}}>{toast.msg}</div>}
 
       {/* Header */}
-      <div className="page-header" style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+      <div className="page-header" style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start', flexWrap:'wrap', gap:16}}>
         <div><h2>Proyectos</h2><p>Gestiona proyectos de marmolería y consulta el historial de presupuestos.</p></div>
         <div style={{display:'flex',gap:10}}>
-          {selectedId&&<button id="btn-exportar-ficha-pdf" className="btn btn-success" onClick={exportarPDF} disabled={loadingPDF}>{loadingPDF?<span className="spinner"/>:null} Exportar Ficha PDF</button>}
           <button id="btn-nuevo-proyecto" className="btn btn-primary" onClick={()=>{setForm(FORM_INIT);setModalNuevo(true);}}>Nuevo Proyecto</button>
         </div>
       </div>
@@ -196,36 +218,87 @@ export default function ProyectosPage() {
 
           {selectedId&&<div style={{marginBottom:16,padding:'10px 16px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:'var(--radius-md)',fontSize:13,color:'var(--accent-blue)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <span><strong>{proyectos.find(p=>p.id_proyecto===selectedId)?.nombre_proyecto||proyectos.find(p=>p.id_proyecto===selectedId)?.nombre_cliente}</strong> — haz clic en "Exportar Ficha PDF" para descargar</span>
-            <button className="btn btn-ghost btn-sm" onClick={()=>setSelectedId(null)}>✕</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setSelectedId(null)} style={{ padding: '6px' }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>}
 
           {loadingProy?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
           :proyectosFiltrados.length===0?<div className="empty-state"><h3>Sin proyectos {filtroEstatus!=='Todos'?`en "${filtroEstatus}"`:''}</h3><p>Crea uno con el botón de arriba o aprueba un presupuesto.</p></div>
           :<div style={{overflowX:'auto'}}><table className="list-table">
-            <thead><tr><th style={{width:36}}></th><th>Proyecto / Cliente</th><th>RIF/Cédula</th><th>Descripción</th><th>Estatus</th><th>Monto USD</th><th>Inicio</th><th style={{textAlign:'right'}}>Acciones</th></tr></thead>
+            <thead><tr><th style={{width:36}}></th><th>Proyecto / Cliente</th><th className="hide-on-mobile">RIF/Cédula</th><th className="hide-on-mobile">Descripción</th><th>Estatus</th><th>Monto USD</th><th className="hide-on-mobile">Inicio</th><th className="hide-on-mobile" style={{textAlign:'right'}}>Acciones</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>
               {proyectosFiltrados.map(p=>(
-                <tr key={p.id_proyecto} className={`prow${selectedId===p.id_proyecto?' sel':''}`} onClick={()=>setSelectedId(selectedId===p.id_proyecto?null:p.id_proyecto)}>
-                  <td><div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${selectedId===p.id_proyecto?'var(--accent-blue)':'var(--border)'}`,background:selectedId===p.id_proyecto?'var(--accent-blue)':'transparent',transition:'all .15s'}}/></td>
-                  <td><div style={{fontWeight:700,color:'var(--text-primary)'}}>{p.nombre_proyecto || p.nombre_cliente}</div><div style={{fontSize:12,color:'var(--text-secondary)'}}>{p.nombre_cliente} <span style={{fontSize:11,color:'var(--text-muted)'}}>#{p.id_proyecto}</span></div></td>
-                  <td style={{fontSize:13,color:'var(--text-secondary)',fontFamily:'monospace'}}>{p.rif_cedula||'—'}</td>
-                  <td style={{maxWidth:220}}><div style={{fontSize:13,color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.descripcion_obra||<span style={{color:'var(--text-muted)'}}>Sin descripción</span>}</div></td>
-                  <td onClick={e=>e.stopPropagation()}>
-                    <span className={`badge ${ESTATUS_BADGE[p.estatus]||'badge-borrador'}`}>
-                      <select className="estsel" value={p.estatus} onChange={e=>cambiarEstatus(p.id_proyecto,e.target.value)}>
-                        {ESTATUS_LIST.map(s=><option key={s} value={s} style={{background:'var(--bg-secondary)',color:'var(--text-primary)'}}>{s}</option>)}
-                      </select>
-                    </span>
-                  </td>
-                  <td style={{color:'var(--accent-green)',fontSize:13,whiteSpace:'nowrap',fontWeight:600}}>{p.monto_usd?`$${Number(p.monto_usd).toFixed(2)}`:'—'}</td>
-                  <td style={{color:'var(--text-muted)',fontSize:13,whiteSpace:'nowrap'}}>{fmtFecha(p.fecha_inicio)}</td>
-                  <td style={{textAlign:'right'}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-                      <button className="btn btn-ghost btn-sm" onClick={()=>abrirEditar(p)} style={{fontSize: 12, padding: '4px 8px'}}>Editar</button>
-                      <button className="btn btn-ghost btn-sm" style={{color:'var(--accent-red)',fontSize: 12, padding: '4px 8px'}} onClick={()=>eliminarProyecto(p)}>Eliminar</button>
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={p.id_proyecto}>
+                  <tr className={`prow table-row-clickable ${selectedId===p.id_proyecto?' sel':''}`} onClick={()=>{ setSelectedId(selectedId===p.id_proyecto?null:p.id_proyecto); toggleProyExpand(p.id_proyecto); }}>
+                    <td data-label="Selección"><div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${selectedId===p.id_proyecto?'var(--accent-blue)':'var(--border)'}`,background:selectedId===p.id_proyecto?'var(--accent-blue)':'transparent',transition:'all .15s'}}/></td>
+                    <td data-label="Proyecto/Cliente"><div style={{fontWeight:700,color:'var(--text-primary)'}}>{p.nombre_proyecto || p.nombre_cliente}</div><div style={{fontSize:12,color:'var(--text-secondary)'}}>{p.nombre_cliente} <span style={{fontSize:11,color:'var(--text-muted)'}}>#{p.id_proyecto}</span></div></td>
+                    <td className="hide-on-mobile" data-label="RIF/Cédula" style={{fontSize:13,color:'var(--text-secondary)',fontFamily:'monospace'}}>{p.rif_cedula||'—'}</td>
+                    <td className="hide-on-mobile" data-label="Descripción" style={{maxWidth:220}}><div style={{fontSize:13,color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.descripcion_obra||<span style={{color:'var(--text-muted)'}}>Sin descripción</span>}</div></td>
+                    <td data-label="Estatus" onClick={e=>e.stopPropagation()}>
+                      <span className={`badge ${ESTATUS_BADGE[p.estatus]||'badge-borrador'}`}>
+                        <select className="estsel" value={p.estatus} onChange={e=>cambiarEstatus(p.id_proyecto,e.target.value)}>
+                          {ESTATUS_LIST.map(s=><option key={s} value={s} style={{background:'var(--bg-secondary)',color:'var(--text-primary)'}}>{s}</option>)}
+                        </select>
+                      </span>
+                    </td>
+                    <td data-label="Monto USD" style={{color:'var(--accent-green)',fontSize:13,whiteSpace:'nowrap',fontWeight:600}}>{p.monto_usd?`$${Number(p.monto_usd).toFixed(2)}`:'—'}</td>
+                    <td className="hide-on-mobile" data-label="Inicio" style={{color:'var(--text-muted)',fontSize:13,whiteSpace:'nowrap'}}>{fmtFecha(p.fecha_inicio)}</td>
+                    <td className="hide-on-mobile" data-label="Acciones" style={{textAlign:'right'}} onClick={e=>e.stopPropagation()}>
+                      <div style={{display:'flex',gap:6,justifyContent:'flex-end',alignItems:'center'}}>
+                        <button
+                          className="btn-pdf"
+                          disabled={loadingPDF === p.id_proyecto}
+                          onClick={() => exportarPDF(p.id_proyecto)}
+                          title="Exportar Ficha PDF"
+                        >
+                          {loadingPDF === p.id_proyecto
+                            ? <span className="spinner" style={{width:12,height:12,borderWidth:2}}/>
+                            : <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          }
+                          PDF
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={()=>abrirEditar(p)} style={{fontSize:12,padding:'4px 8px'}}>Editar</button>
+                        <button className="btn btn-ghost btn-sm" style={{color:'var(--accent-red)',fontSize:12,padding:'4px 8px'}} onClick={()=>eliminarProyecto(p)}>Eliminar</button>
+                      </div>
+                    </td>
+                    <td className="show-on-mobile" style={{ textAlign: 'right' }}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: expandedProyId === p.id_proyecto ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-muted)' }}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </td>
+                  </tr>
+                  <tr className={`expandable-content ${expandedProyId === p.id_proyecto ? 'expanded' : ''}`}>
+                    <td colSpan="9" style={{ padding: 0, border: 'none' }}>
+                      <div className="expandable-details">
+                        <div className="detail-item">
+                          <span className="detail-label">RIF / Cédula</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{p.rif_cedula || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Descripción</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{p.descripcion_obra || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Inicio</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{fmtFecha(p.fecha_inicio)}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                           <button
+                            className="btn btn-ghost btn-sm"
+                            disabled={loadingPDF === p.id_proyecto}
+                            onClick={() => exportarPDF(p.id_proyecto)}
+                            style={{ flex: 1, justifyContent: 'center', color: 'var(--accent-gold)', borderColor: 'rgba(254,183,44,0.35)', borderWidth: 1, borderStyle: 'solid' }}
+                          >
+                            {loadingPDF === p.id_proyecto ? <span className="spinner" style={{width:12,height:12,borderWidth:2}}/> : 'Exportar PDF'}
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(p)} style={{ flex: 1, justifyContent: 'center' }}>Editar</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => eliminarProyecto(p)} style={{ flex: 1, justifyContent: 'center', color: 'var(--accent-red)' }}>Eliminar</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table></div>}
@@ -238,7 +311,7 @@ export default function ProyectosPage() {
           <div className="card-header">
             <div><div className="card-title">Historial de Presupuestos</div><div className="card-subtitle">{presFiltrados.length} registros</div></div>
             <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-              {['Todos','borrador','enviado','aprobado','rechazado','vencido'].map(s=>(
+              {['Todos','borrador','aprobado','vencido'].map(s=>(
                 <button key={s} className={`fpill${filtroPres===s?' act':''}`} onClick={()=>setFiltroPres(s)}>{s==='Todos'?'Todos':PRES_LABEL[s]||s}</button>
               ))}
               <button className="btn btn-ghost btn-sm" onClick={()=>refetchPres(false)} disabled={loadingPres}>{loadingPres?<span className="spinner"/>:'Actualizar'}</button>
@@ -248,18 +321,43 @@ export default function ProyectosPage() {
           {loadingPres?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
           :presFiltrados.length===0?<div className="empty-state"><h3>Sin presupuestos {filtroPres!=='Todos'?`con estatus "${filtroPres}"`:''}</h3></div>
           :<div style={{overflowX:'auto'}}><table className="list-table">
-            <thead><tr><th>N° Presupuesto</th><th>Cliente</th><th>Descripción</th><th>Total USD</th><th>Tasa</th><th>Estatus</th><th>Fecha</th></tr></thead>
+            <thead><tr><th>N° Presupuesto</th><th>Cliente</th><th className="hide-on-mobile">Descripción</th><th>Total USD</th><th className="hide-on-mobile">Tasa</th><th>Estatus</th><th className="hide-on-mobile">Fecha</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>
               {presFiltrados.map(p=>(
-                <tr key={p.id}>
-                  <td><span style={{fontFamily:'monospace',color:'var(--accent-blue)',fontWeight:600}}>{p.numero_presupuesto}</span></td>
-                  <td><div style={{fontWeight:600}}>{p.cliente_nombre||'—'}</div>{p.cliente_rif&&<div style={{fontSize:11,color:'var(--text-muted)'}}>{p.cliente_rif}</div>}</td>
-                  <td style={{maxWidth:200,color:'var(--text-secondary)'}}><div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.proyecto_descripcion||'—'}</div></td>
-                  <td style={{fontWeight:700,color:'var(--accent-cyan)'}}>{fmtUSD(p.total_usd)}</td>
-                  <td style={{color:'var(--accent-gold)',fontSize:13}}>{p.tasa_cambio_usd_bs} Bs</td>
-                  <td><span className={`badge ${PRES_BADGE[p.estatus]||'badge-borrador'}`}>{PRES_LABEL[p.estatus]||p.estatus}</span></td>
-                  <td style={{color:'var(--text-muted)',fontSize:13}}>{fmtFecha(p.created_at)}</td>
-                </tr>
+                <React.Fragment key={p.id}>
+                  <tr className="table-row-clickable" onClick={() => togglePresExpand(p.id)}>
+                    <td data-label="N° Presupuesto"><span style={{fontFamily:'monospace',color:'var(--accent-purple)',fontWeight:600}}>{p.numero_presupuesto}</span></td>
+                    <td data-label="Cliente"><div style={{fontWeight:600}}>{p.cliente_nombre||'—'}</div>{p.cliente_rif&&<div style={{fontSize:11,color:'var(--text-muted)'}}>{p.cliente_rif}</div>}</td>
+                    <td className="hide-on-mobile" data-label="Proyecto" style={{maxWidth:200,color:'var(--text-secondary)'}}><div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.proyecto_descripcion||'—'}</div></td>
+                    <td data-label="Total USD" style={{fontWeight:700,color:'var(--accent-purple)'}}>{fmtUSD(p.total_usd)}</td>
+                    <td className="hide-on-mobile" data-label="Tasa" style={{color:'var(--accent-gold)',fontSize:13}}>{p.tasa_cambio_usd_bs} Bs</td>
+                    <td data-label="Estatus"><span className={`badge ${PRES_BADGE[p.estatus]||'badge-borrador'}`}>{PRES_LABEL[p.estatus]||p.estatus}</span></td>
+                    <td className="hide-on-mobile" data-label="Fecha" style={{color:'var(--text-muted)',fontSize:13}}>{fmtFecha(p.created_at)}</td>
+                    <td className="show-on-mobile" style={{ textAlign: 'right' }}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: expandedPresId === p.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-muted)' }}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </td>
+                  </tr>
+                  <tr className={`expandable-content ${expandedPresId === p.id ? 'expanded' : ''}`}>
+                    <td colSpan="8" style={{ padding: 0, border: 'none' }}>
+                      <div className="expandable-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Descripción</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{p.proyecto_descripcion || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Tasa</span>
+                          <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{p.tasa_cambio_usd_bs} Bs</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Fecha</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{fmtFecha(p.created_at)}</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table></div>}

@@ -17,10 +17,10 @@ const pool = mysql.createPool({
 (async () => {
   try {
     const conn = await pool.getConnection();
-    console.log('✅ Conectado a MySQL — Base de datos: slabpro_bd');
+    console.log('[OK] Conectado a MySQL — Base de datos: slabpro_bd');
     conn.release();
   } catch (err) {
-    console.error('❌ Error de conexión a MySQL:', err.message);
+    console.error('[ERROR] Error de conexión a MySQL:', err.message);
     process.exit(1);
   }
 })();

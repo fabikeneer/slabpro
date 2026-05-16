@@ -21,7 +21,7 @@ const db      = require('../db');
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT p.*, p.id_presupuesto AS id, c.nombre AS cliente_nombre, c.rif AS cliente_rif, c.telefono AS cliente_telefono
+      SELECT p.*, p.id_presupuesto AS id, c.nombre AS cliente_nombre, c.rif AS cliente_rif, c.telefono AS cliente_telefono, c.email AS cliente_email, c.direccion AS cliente_direccion
       FROM presupuestos p
       LEFT JOIN clientes c ON p.cliente_id = c.id_cliente
       ORDER BY p.created_at DESC

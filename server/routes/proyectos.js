@@ -63,32 +63,8 @@ router.get('/activos', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// GET /api/proyectos/:id  → Obtener uno por ID
-// ─────────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Validar que no es 'activos' (ruta ya manejada arriba)
-    if (id === 'activos') return res.status(404).json({ success: false, message: 'Not found' });
-
-    const [[proyecto]] = await db.query(
-      'SELECT * FROM proyectos WHERE id_proyecto = ?', [id]
-    );
-
-    if (!proyecto) {
-      return res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
-    }
-
-    res.json({ success: true, data: proyecto });
-  } catch (err) {
-    console.error('Error GET /proyectos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
 // GET /api/proyectos/:id/ficha  → Ficha completa con pagos
+// IMPORTANTE: debe ir ANTES de /:id para que Express no capture 'ficha' como id
 // ─────────────────────────────────────────────────────────────
 router.get('/:id/ficha', async (req, res) => {
   try {
@@ -127,13 +103,36 @@ router.get('/:id/ficha', async (req, res) => {
         proyecto,
         pagos,
         resumen: {
-          total_pagos:          pagos.length,
-          costo_mano_obra_usd:  totalNomina,
+          total_pagos:         pagos.length,
+          costo_mano_obra_usd: totalNomina,
         }
       }
     });
   } catch (err) {
     console.error('Error GET /proyectos/:id/ficha:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// GET /api/proyectos/:id  → Obtener uno por ID
+// ─────────────────────────────────────────────────────────────
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id === 'activos') return res.status(404).json({ success: false, message: 'Not found' });
+
+    const [[proyecto]] = await db.query(
+      'SELECT * FROM proyectos WHERE id_proyecto = ?', [id]
+    );
+
+    if (!proyecto) {
+      return res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
+    }
+
+    res.json({ success: true, data: proyecto });
+  } catch (err) {
+    console.error('Error GET /proyectos/:id:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

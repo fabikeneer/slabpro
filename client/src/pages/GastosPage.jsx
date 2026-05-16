@@ -5,6 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 
 registerLocale('es', es);
 
@@ -123,7 +124,7 @@ export default function GastosPage() {
   const guardarGasto = async (e) => {
     e.preventDefault();
     if (!form.descripcion || !form.monto_usd || !form.categoria) {
-      console.error('Categoría, descripción y monto son obligatorios');
+      toastError('Categoría, descripción y monto son obligatorios');
       return;
     }
     setSavingForm(true);
@@ -142,10 +143,11 @@ export default function GastosPage() {
       setForm({ ...FORM_INIT, tasa_usdt: tasa });
       setEditId(null);
       setTab('historial');
+      toastSuccess(editId ? 'Gasto actualizado' : 'Gasto registrado');
       // Actualización en segundo plano sin spinner para mantener la fluidez de la UI
       fetchGastos(true);
     } catch (er) {
-      console.error('Error al guardar el gasto:', er.response?.data?.error || er.message);
+      toastError(er.response?.data?.error || er.message || 'Error al guardar el gasto');
     } finally {
       setSavingForm(false);
     }
@@ -166,13 +168,15 @@ export default function GastosPage() {
   };
 
   const eliminarGasto = async (id) => {
-    if (!window.confirm('¿Eliminar este gasto?')) return;
+    const isConfirmed = await confirmAction('¿Eliminar este gasto?', 'Esta acción no se puede deshacer.');
+    if (!isConfirmed) return;
     try {
       await axios.delete(`/api/gastos/${id}`);
+      toastSuccess('Gasto eliminado');
       // Actualización en segundo plano sin spinner
       fetchGastos(true);
     } catch (er) {
-      console.error('Error al eliminar el gasto:', er.response?.data?.error || er.message);
+      toastError(er.response?.data?.error || er.message || 'Error al eliminar el gasto');
     }
   };
 
@@ -279,8 +283,9 @@ export default function GastosPage() {
 
       const per = PERIODOS.find(p => p.value === periodo)?.label || 'Personalizado';
       doc.save(`Reporte_Gastos_${per.replace(/\s/g,'_')}_${new Date().toLocaleDateString('es-VE').replace(/\//g,'-')}.pdf`);
+      toastSuccess('PDF generado con éxito');
     } catch (er) {
-      console.error('Error al generar PDF:', er.response?.data?.error || er.message);
+      toastError(er.response?.data?.error || er.message || 'Error al generar PDF');
     }
   };
 
@@ -297,7 +302,10 @@ export default function GastosPage() {
       {/* Page Header */}
       <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
         <div>
-          <h2>💸 Gastos</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            Gastos
+          </h2>
           <p>Control centralizado de todos los egresos de la empresa.</p>
         </div>
         <div style={{ display:'flex', gap:8, background:'var(--bg-card)', padding:6, borderRadius:'var(--radius-lg)', border:'1px solid var(--border)' }}>
@@ -306,7 +314,11 @@ export default function GastosPage() {
               style={{ padding:'8px 18px', borderRadius:'var(--radius-md)', border:'none', fontWeight:600, cursor:'pointer', transition:'all 0.2s',
                 background: tab===t ? 'rgba(59,130,246,0.15)' : 'transparent',
                 color: tab===t ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
-              {t === 'historial' ? '📋 Historial' : '➕ Añadir Gasto'}
+              {t === 'historial' ? (
+                <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: 6}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Historial</>
+              ) : (
+                <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: 6}}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Añadir Gasto</>
+              )}
             </button>
           ))}
         </div>
@@ -315,7 +327,9 @@ export default function GastosPage() {
       {/* STATS */}
       <div className="stats-grid" style={{ marginBottom:24 }}>
         <div className="stat-card" style={{ borderLeft:'3px solid var(--accent-blue)' }}>
-          <div className="stat-icon" style={{ background:'rgba(59,130,246,0.1)' }}>💰</div>
+          <div className="stat-icon" style={{ background:'rgba(59,130,246,0.1)' }}>
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{color: 'var(--accent-blue)'}}><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
           <div>
             <div className="stat-value" style={{ color:'var(--accent-blue)', fontSize:20 }}>{fmtUSD(totalGeneral.total_usd)}</div>
             <div className="stat-label">Total del Período (USD)</div>
@@ -324,7 +338,17 @@ export default function GastosPage() {
         {totalesCat.slice(0,3).map(t => (
           <div key={t.categoria} className="stat-card" style={{ borderLeft:`3px solid ${CAT_COLORS[t.categoria]||'#94a3b8'}` }}>
             <div className="stat-icon" style={{ background:`${CAT_COLORS[t.categoria]||'#94a3b8'}22` }}>
-              {t.categoria==='Nomina'?'👷':t.categoria==='Insumos'?'📦':t.categoria==='Fletes'?'🚚':t.categoria==='Pagos Externos'?'🔧':'📌'}
+              {t.categoria === 'Nomina' ? (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              ) : t.categoria === 'Insumos' ? (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              ) : t.categoria === 'Fletes' ? (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              ) : t.categoria === 'Pagos Externos' ? (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+              ) : (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              )}
             </div>
             <div>
               <div className="stat-value" style={{ color: CAT_COLORS[t.categoria]||'#94a3b8', fontSize:18 }}>{fmtUSD(t.total_usd)}</div>
@@ -339,7 +363,13 @@ export default function GastosPage() {
         <div className="card">
           <div className="card-header">
             <div>
-              <h3 className="card-title">{editId ? '✏️ Editar Gasto' : '➕ Registrar Nuevo Gasto'}</h3>
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {editId ? (
+                  <><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Editar Gasto</>
+                ) : (
+                  <><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Registrar Nuevo Gasto</>
+                )}
+              </h3>
               <div className="card-subtitle">Los gastos de nómina se sincronizan automáticamente desde el módulo de Nómina.</div>
             </div>
             {editId && (
@@ -373,7 +403,9 @@ export default function GastosPage() {
             <div className="form-group">
               <label className="form-label">Tasa USDT (Bs/USD)</label>
               <input type="number" step="0.01" className="form-input" value={form.tasa_usdt} onChange={e => setForm({...form, tasa_usdt:e.target.value})} />
-              <span style={{ fontSize:11, color:'var(--accent-green)', marginTop:2 }}>✓ Auto-sincronizada con Binance P2P</span>
+              <span style={{ fontSize:11, color:'var(--accent-green)', marginTop:2, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Auto-sincronizada con Binance P2P
+              </span>
             </div>
             <div className="form-group">
               <label className="form-label">Fecha del Gasto</label>
@@ -433,7 +465,7 @@ export default function GastosPage() {
               </select>
             </div>
             <button onClick={exportarPDF} className="btn btn-primary" style={{ padding:'11px 20px' }}>
-              📄 Exportar PDF
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Exportar PDF
             </button>
           </div>
 
@@ -466,7 +498,9 @@ export default function GastosPage() {
               <div style={{ padding:40, textAlign:'center' }}><span className="spinner" /></div>
             ) : gastos.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">💸</div>
+                <div className="empty-icon">
+                  <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
                 <h3>No hay gastos registrados</h3>
                 <p>Los gastos de nómina aparecerán aquí automáticamente, o añade uno manual.</p>
               </div>
@@ -487,22 +521,22 @@ export default function GastosPage() {
                   <tbody>
                     {gastos.map(g => (
                       <tr key={g.id_gasto} className="gasto-row">
-                        <td style={{ whiteSpace:'nowrap', color:'var(--text-muted)', fontSize:13 }}>{fmtDate(g.fecha_gasto)}</td>
-                        <td>
+                        <td data-label="Fecha" style={{ whiteSpace:'nowrap', color:'var(--text-muted)', fontSize:13 }}>{fmtDate(g.fecha_gasto)}</td>
+                        <td data-label="Categoría">
                           <span className="cat-badge" style={{ background:`${CAT_COLORS[g.categoria]||'#94a3b8'}22`, color: CAT_COLORS[g.categoria]||'#94a3b8' }}>
                             {catLabel(g.categoria)}
                           </span>
                         </td>
-                        <td style={{ maxWidth:280 }}>
+                        <td data-label="Descripción" style={{ maxWidth:280 }}>
                           <span style={{ color:'var(--text-primary)', fontSize:13 }}>{g.descripcion}</span>
                         </td>
-                        <td style={{ color:'var(--text-muted)', fontSize:12 }}>{g.proyecto_nombre || '—'}</td>
-                        <td style={{ textAlign:'right', fontWeight:700, color:'var(--text-primary)' }}>{fmtUSD(g.monto_usd)}</td>
+                        <td data-label="Proyecto" style={{ color:'var(--text-muted)', fontSize:12 }}>{g.proyecto_nombre || '—'}</td>
+                        <td data-label="Monto USD" style={{ textAlign:'right', fontWeight:700, color:'var(--text-primary)' }}>{fmtUSD(g.monto_usd)}</td>
                         {/* Si monto_bs es 0 (registro histórico), calcular con tasa actual */}
-                        <td style={{ textAlign:'right', color:'var(--accent-gold)', fontSize:12 }}>
+                        <td data-label="Monto Bs" style={{ textAlign:'right', color:'var(--accent-gold)', fontSize:12 }}>
                           {fmtBs(parseFloat(g.monto_bs) > 0 ? g.monto_bs : parseFloat(g.monto_usd) * tasa)}
                         </td>
-                        <td style={{ textAlign:'right' }}>
+                        <td data-label="Acciones" style={{ textAlign:'right' }}>
                           <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
                             <button className="btn btn-ghost btn-sm" onClick={() => editarGasto(g)} style={{ fontSize:12, padding:'4px 8px' }}>Editar</button>
                             <button className="btn btn-ghost btn-sm" onClick={() => eliminarGasto(g.id_gasto)} style={{ color:'var(--accent-red)', fontSize:12, padding:'4px 8px' }}>Eliminar</button>

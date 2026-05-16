@@ -1,6 +1,7 @@
 // components/BudgetForm.jsx — Formulario de Presupuesto
 import { useState, useEffect } from 'react';
 import { useBudget, TIPOS_LINEA, TIPOS_PIEDRA } from '../hooks/useBudget';
+import { useFetch } from '../hooks/useFetch';
 import { generarPDF } from '../utils/pdfGenerator';
 
 // ── Formato de moneda ─────────────────────────────────────────────────────
@@ -15,6 +16,9 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
     totales, guardarPresupuesto,
     resetForm, loading, guardado,
   } = useBudget();
+
+  const { data: configData } = useFetch('/api/config');
+  const configEmpresa = configData?.data || null;
 
   useEffect(() => {
     if (presupuestoEdit) {
@@ -174,7 +178,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
             {totales.lineasCalculadas.map((linea) => (
               <tr key={linea._id}>
                 {/* Tipo */}
-                <td>
+                <td data-label="Tipo">
                   <select
                     className="select-sm"
                     value={linea.tipo}
@@ -187,7 +191,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                 </td>
 
                 {/* Descripción: si es piedra muestra dropdown, si no texto libre */}
-                <td>
+                <td data-label="Descripción">
                   {linea.tipo === 'piedra' ? (
                     <select
                       id={`desc-${linea._id}`}
@@ -213,7 +217,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                 </td>
 
                 {/* Medida */}
-                <td>
+                <td data-label="Medida">
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input
                       type="number"
@@ -226,21 +230,21 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                       disabled={linea.tipo === 'flete' || linea.tipo === 'otro'}
                       style={{ 
                         paddingRight: (linea.tipo !== 'flete' && linea.tipo !== 'otro') ? '26px' : '8px',
-                        borderColor: linea.tipo === 'drywall' ? 'var(--accent-gold)' : undefined
+                        borderColor: (linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') ? 'var(--accent-gold)' : undefined
                       }}
-                      title={linea.tipo === 'drywall' ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
+                      title={(linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
                     />
-                    {linea.tipo === 'drywall' && (
+                    {(linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') && (
                       <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700 }}>m²</span>
                     )}
-                    {(linea.tipo === 'piedra' || linea.tipo === 'carpinteria' || linea.tipo === 'instalacion') && (
+                    {(linea.tipo === 'piedra' || linea.tipo === 'instalacion') && (
                       <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>ml</span>
                     )}
                   </div>
                 </td>
 
                 {/* Precio USD */}
-                <td>
+                <td data-label="Precio USD">
                   <input
                     type="number"
                     className="input-sm"
@@ -253,7 +257,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                 </td>
 
                 {/* Cantidad */}
-                <td>
+                <td data-label="Cantidad">
                   <input
                     type="number"
                     className="input-sm"
@@ -266,22 +270,22 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                 </td>
 
                 {/* Subtotal USD */}
-                <td className="subtotal-cell">{fmtUSD(linea.subtotalUSD)}</td>
+                <td data-label="Subtotal USD" className="subtotal-cell">{fmtUSD(linea.subtotalUSD)}</td>
 
                 {/* Subtotal Bs */}
-                <td className="subtotal-cell" style={{ color: 'var(--accent-gold)' }}>
+                <td data-label="Subtotal Bs" className="subtotal-cell" style={{ color: 'var(--accent-gold)' }}>
                   {fmtBs(linea.subtotalBs)}
                 </td>
 
                 {/* Eliminar */}
-                <td>
+                <td data-label="Acción">
                   <button
                     className="btn btn-danger btn-icon"
                     onClick={() => eliminarLinea(linea._id)}
                     title="Eliminar línea"
                     disabled={form.lineas.length === 1}
                   >
-                    ✕
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
                 </td>
               </tr>
@@ -392,7 +396,9 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
             value={form.tasa_cambio_usd_bs}
             onChange={e => setField('tasa_cambio_usd_bs', e.target.value)}
           />
-          <span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 500 }}>✓ Tasa sincronizada con USDT (Binance P2P)</span>
+          <span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Tasa sincronizada con USDT (Binance P2P)
+          </span>
         </div>
         <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-muted)' }}>
           <div>Actualizado: {new Date().toLocaleDateString('es-VE')}</div>
@@ -460,23 +466,25 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
         )}
 
         {onCancel && (
-          <button className="btn btn-ghost" onClick={onCancel}>
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>
             Cancelar
           </button>
         )}
 
-        <button className="btn btn-ghost" onClick={resetForm} disabled={loading}>
+        <button type="button" className="btn btn-ghost" onClick={resetForm} disabled={loading}>
           Limpiar
         </button>
 
-        {guardado && (
-          <button
-            className="btn btn-ghost"
-            onClick={() => generarPDF(form, totales)}
-          >
-            Exportar PDF
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn btn-ghost"
+          title="Generar PDF del presupuesto"
+          onClick={() => generarPDF(form, totales, guardado, configEmpresa)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Exportar PDF
+        </button>
 
         <button
           id="btn-guardar-presupuesto"

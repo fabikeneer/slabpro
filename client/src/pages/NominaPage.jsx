@@ -4,8 +4,8 @@ import { es } from 'date-fns/locale/es';
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
 import { useFetch } from '../hooks/useFetch';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { exportarReportePDFProfesional, descargarComprobanteProfesional } from '../utils/nominaPdf';
+import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 
 const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 const fmtBs  = (n) => `Bs. ${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
@@ -25,6 +25,8 @@ export default function NominaPage() {
     // Estados Compartidos (SRP aplicados a través del custom hook)
     const { data: empData, refetch: refetchEmp } = useFetch('/api/nomina/empleados');
     const { data: proyData } = useFetch('/api/nomina/proyectos');
+    const { data: configData } = useFetch('/api/config');
+    const configEmpresa = configData?.data || null;
     
     const empleados = empData || [];
     const proyectos = proyData || [];
@@ -96,7 +98,7 @@ export default function NominaPage() {
         } catch (error) {
             console.error('Error obteniendo reporte:', error);
             const errMsg = error.response?.data?.error || error.message || 'Error al generar el reporte';
-            alert(errMsg);
+            toastError(errMsg);
         } finally {
             setLoading(false);
         }
@@ -106,12 +108,12 @@ export default function NominaPage() {
         e.preventDefault();
         if (esExterno) {
             if (!externo.beneficiario || !nuevoPago.monto_usd || !nuevoPago.concepto) {
-                alert('Para pagos externos: Nombre del Beneficiario, Monto y Concepto son obligatorios');
+                toastError('Para pagos externos: Nombre del Beneficiario, Monto y Concepto son obligatorios');
                 return;
             }
         } else {
             if (!nuevoPago.id_empleado || !nuevoPago.monto_usd || !nuevoPago.concepto) {
-                alert('Por favor complete todos los campos requeridos');
+                toastError('Por favor complete todos los campos requeridos');
                 return;
             }
         }
@@ -155,89 +157,18 @@ export default function NominaPage() {
         } catch (error) {
             console.error('Error registrando pago:', error);
             const errMsg = error.response?.data?.error || error.message || 'Error al registrar el pago';
-            alert(errMsg);
+            toastError(errMsg);
         } finally {
             setLoadingPago(false);
         }
     };
 
     const descargarComprobante = (pago) => {
-        if (!pago) return;
-        const doc = new jsPDF();
-        
-        doc.setFontSize(22);
-        doc.text('COMPROBANTE DE PAGO', 105, 25, { align: 'center' });
-        
-        doc.setFontSize(12);
-        doc.text(`Fecha de Emisión: ${pago.fecha}`, 20, 45);
-        doc.text(`Trabajador: ${pago.empleadoNombre}`, 20, 55);
-        doc.text(`Cédula/RIF: ${pago.empleadoCedula}`, 20, 65);
-        doc.text(`Cargo/Rol: ${pago.empleadoRol}`, 20, 75);
-        doc.text(`Proyecto: ${pago.proyectoNombre}`, 20, 85);
-        doc.text(`Concepto de Pago: ${pago.concepto}`, 20, 95);
-        
-        doc.setLineWidth(0.5);
-        doc.line(20, 105, 190, 105);
-
-        doc.setFontSize(14);
-        doc.text(`Monto Pagado (USD): ${fmtUSD(pago.monto_usd)}`, 20, 120);
-        doc.text(`Tasa de Cambio (Bs): ${pago.tasa_dia}`, 20, 130);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Total Recibido: ${fmtBs(pago.montoBsCalculado)}`, 20, 140);
-        doc.setFont('helvetica', 'normal');
-
-        doc.setLineWidth(0.5);
-        doc.line(70, 220, 140, 220);
-        doc.setFontSize(10);
-        doc.text('Firma del Trabajador (Recibí Conforme)', 105, 228, { align: 'center' });
-        
-        doc.save(`Comprobante_Nómina_${pago.empleadoNombre.replace(/\s+/g, '_')}_${pago.fecha.replace(/\//g, '-')}.pdf`);
+        descargarComprobanteProfesional(pago, configEmpresa);
     };
 
     const exportarReportePDF = () => {
-        if (!reporte) return;
-        const doc = new jsPDF();
-        
-        doc.setFontSize(22);
-        doc.text('SLABPRO', 105, 20, { align: 'center' });
-        doc.setFontSize(16);
-        doc.text('Reporte de Nómina', 105, 30, { align: 'center' });
-        
-        doc.setFontSize(10);
-        const empName = idEmpleado ? empleados.find(e => String(e.id) === String(idEmpleado))?.nombre : 'Todos los Empleados';
-        doc.text(`Periodo: ${startDate.toLocaleDateString('es-VE')} - ${endDate.toLocaleDateString('es-VE')}`, 14, 45);
-        doc.text(`Trabajador: ${empName}`, 14, 52);
-        doc.text(`Generado por: Administrador SlabPro`, 14, 59);
-
-        const tableColumn = ["Fecha", "Trabajador", "Concepto", "Proyecto", "Monto ($)", "Monto (Bs)"];
-        const tableRows = [];
-
-        reporte.pagos.forEach(p => {
-            const pagoData = [
-                new Date(p.fecha_pago).toLocaleDateString('es-VE'),
-                p.trabajador || 'Desconocido',
-                p.concepto,
-                p.proyecto || 'Desconocido',
-                fmtUSD(p.monto_usd),
-                fmtBs(p.monto_bs)
-            ];
-            tableRows.push(pagoData);
-        });
-
-        doc.autoTable({
-            startY: 65,
-            head: [tableColumn],
-            body: tableRows,
-            theme: 'striped',
-            headStyles: { fillColor: [59, 130, 246] }
-        });
-
-        const finalY = doc.lastAutoTable.finalY || 65;
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Total Nómina del Periodo: ${fmtUSD(reporte.resumen.total_usd)} / ${fmtBs(reporte.resumen.total_bs)}`, 14, finalY + 15);
-        
-        doc.save(`Reporte_Nomina_${startDate.toLocaleDateString('es-VE').replace(/\//g, '-')}_a_${endDate.toLocaleDateString('es-VE').replace(/\//g, '-')}.pdf`);
+        exportarReportePDFProfesional(reporte, startDate, endDate, idEmpleado, empleados, configEmpresa);
     };
 
     const montoBsCalculado = (parseFloat(nuevoPago.monto_usd) || 0) * (parseFloat(nuevoPago.tasa_dia) || 0);
@@ -254,7 +185,7 @@ export default function NominaPage() {
     const guardarEmpleado = async (e) => {
         e.preventDefault();
         if (!formEmp.nombre) {
-            alert('El nombre es obligatorio');
+            toastError('El nombre es obligatorio');
             return;
         }
         setLoadingEmp(true);
@@ -266,16 +197,16 @@ export default function NominaPage() {
 
             if (formEmp.id) {
                 await axios.put(`/api/nomina/empleados/${formEmp.id}`, payload);
-                alert('Empleado actualizado');
+                toastSuccess('Empleado actualizado');
             } else {
                 await axios.post('/api/nomina/empleados', payload);
-                alert('Empleado registrado');
+                toastSuccess('Empleado registrado');
             }
             setFormEmp({ id: null, nombre: '', cedula_rif: '', telefono: '', rol: [] });
             refetchEmp(true); // Recargar en segundo plano
         } catch (error) {
             console.error('Error guardando empleado:', error);
-            alert('Error al guardar el empleado');
+            toastError('Error al guardar el empleado');
         } finally {
             setLoadingEmp(false);
         }
@@ -293,14 +224,15 @@ export default function NominaPage() {
     };
 
     const eliminarEmpleado = async (id) => {
-        if (!window.confirm('¿Estás seguro de eliminar este empleado?')) return;
+        const isConfirmed = await confirmAction('¿Eliminar empleado?', 'Esta acción no se puede deshacer.');
+        if (!isConfirmed) return;
         try {
             await axios.delete(`/api/nomina/empleados/${id}`);
-            alert('Empleado eliminado');
+            toastSuccess('Empleado eliminado');
             refetchEmp(true); // Recargar en segundo plano sin spinner
         } catch (error) {
             console.error('Error eliminando empleado:', error);
-            alert(error.response?.data?.error || 'Error al eliminar el empleado');
+            toastError(error.response?.data?.error || 'Error al eliminar el empleado');
         }
     };
 
@@ -493,7 +425,9 @@ export default function NominaPage() {
                                     value={nuevoPago.tasa_dia}
                                     onChange={(e) => setNuevoPago({...nuevoPago, tasa_dia: e.target.value})}
                                 />
-                                <span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 500, marginTop: 4, display: 'block' }}>✓ Tasa sincronizada con USDT (Binance P2P)</span>
+                                <span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 500, marginTop: 4, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Tasa sincronizada con USDT (Binance P2P)
+                                </span>
                             </div>
 
                             <div className="form-group">
@@ -578,11 +512,11 @@ export default function NominaPage() {
                                             <tbody>
                                                 {reporte.pagos.map((pago) => (
                                                     <tr key={pago.id}>
-                                                        <td>{new Date(pago.fecha_pago).toLocaleDateString('es-VE')}</td>
-                                                        <td>{pago.trabajador || 'Desconocido'}</td>
-                                                        <td>{pago.concepto}</td>
-                                                        <td>{pago.proyecto || 'Desconocido'}</td>
-                                                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                        <td data-label="Fecha">{new Date(pago.fecha_pago).toLocaleDateString('es-VE')}</td>
+                                                        <td data-label="Trabajador">{pago.trabajador || 'Desconocido'}</td>
+                                                        <td data-label="Concepto">{pago.concepto}</td>
+                                                        <td data-label="Proyecto">{pago.proyecto || 'Desconocido'}</td>
+                                                        <td data-label="Monto USD" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                                                             {fmtUSD(pago.monto_usd)}
                                                         </td>
                                                     </tr>
@@ -715,18 +649,18 @@ export default function NominaPage() {
                                     {empleadosFiltrados.length > 0 ? (
                                         empleadosFiltrados.map(emp => (
                                             <tr key={emp.id}>
-                                                <td>#{emp.id}</td>
-                                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{emp.nombre}</td>
-                                                <td>{emp.cedula_rif || '-'}</td>
-                                                <td>{emp.telefono || '-'}</td>
-                                                <td>
+                                                <td data-label="ID">#{emp.id}</td>
+                                                <td data-label="Nombre" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{emp.nombre}</td>
+                                                <td data-label="Cédula/RIF">{emp.cedula_rif || '-'}</td>
+                                                <td data-label="Teléfono">{emp.telefono || '-'}</td>
+                                                <td data-label="Rol">
                                                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                                         {emp.rol ? emp.rol.split(',').map(r => r.trim()).filter(Boolean).map(r => (
                                                             <span key={r} className="badge badge-enviado">{r}</span>
                                                         )) : <span className="badge badge-borrador">Sin rol</span>}
                                                     </div>
                                                 </td>
-                                                <td style={{ textAlign: 'right' }}>
+                                                <td data-label="Acciones" style={{ textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                                         <button 
                                                             className="btn btn-ghost btn-sm"

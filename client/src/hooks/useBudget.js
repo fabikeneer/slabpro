@@ -1,11 +1,12 @@
 // hooks/useBudget.js — Estado y lógica del Módulo de Presupuestos
 import { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import toast from 'react-hot-toast';
+import { toastSuccess, toastError } from '../utils/alerts';
 
 // ── Tipos de campo disponibles ────────────────────────────────────────────
 export const TIPOS_LINEA = [
   { value: 'piedra',      label: 'Tipo de Piedra'   },
+  { value: 'porcelanato', label: 'Porcelanato'       },
   { value: 'carpinteria', label: 'Carpintería'       },
   { value: 'flete',       label: 'Flete'             },
   { value: 'drywall',     label: 'Drywall'           },
@@ -125,15 +126,15 @@ export function useBudget() {
   const guardarPresupuesto = useCallback(async () => {
     // Validaciones básicas
     if (!form.cliente_nombre && !form.cliente_id) {
-      toast.error('El nombre del cliente es obligatorio.');
+      toastError('El nombre del cliente es obligatorio.');
       return;
     }
     if (form.lineas.length === 0) {
-      toast.error('Agregue al menos una línea al presupuesto.');
+      toastError('Agregue al menos una línea al presupuesto.');
       return;
     }
     if (!form.tasa_cambio_usd_bs || parseFloat(form.tasa_cambio_usd_bs) <= 0) {
-      toast.error('Ingrese una tasa de cambio USD/Bs válida.');
+      toastError('Ingrese una tasa de cambio USD/Bs válida.');
       return;
     }
 
@@ -177,14 +178,14 @@ export function useBudget() {
       }
 
       if (data.success) {
-        toast.success(`✅ ${data.message}`);
+        toastSuccess(`${data.message}`);
         setGuardado(data.data);
       } else {
-        toast.error(data.message || 'Error al guardar.');
+        toastError(data.message || 'Error al guardar.');
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
-      toast.error(`Error: ${msg}`);
+      toastError(`Error: ${msg}`);
       console.error('Error guardando presupuesto:', err);
     } finally {
       setLoading(false);
