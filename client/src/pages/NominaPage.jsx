@@ -28,7 +28,7 @@ export default function NominaPage() {
     const { data: configData } = useFetch('/api/config');
     const configEmpresa = configData?.data || null;
     
-    const empleados = empData || [];
+    const empleados = empData?.data || [];
     const proyectos = proyData || [];
 
     // Estados Pagos
