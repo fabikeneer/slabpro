@@ -66,7 +66,15 @@ app.use('/api/auth/login', authLimiter);
 
 // ── Rutas públicas ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', server: 'SlabPro API', timestamp: new Date().toISOString() });
+  const pool = require('./db');
+  const dbOk = pool.isDbConnected && pool.isDbConnected();
+  const payload = {
+    status: dbOk ? 'ok' : 'degraded',
+    server: 'SlabPro API',
+    database: dbOk ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  };
+  res.status(200).json(payload);
 });
 
 app.use('/api/auth', authRouter);
@@ -103,8 +111,8 @@ app.use((err, req, res, _next) => {
 // ── Iniciar servidor ─────────────────────────────────────────────────────────
 ensureUsuariosUnique();
 
-app.listen(PORT, () => {
-  console.log(`[INFO] SlabPro Server corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[INFO] SlabPro Server corriendo en 0.0.0.0:${PORT}`);
   console.log(`[INFO] Endpoints disponibles:`);
   console.log(`   GET  http://localhost:${PORT}/api/health`);
   console.log(`   GET  http://localhost:${PORT}/api/presupuestos`);
