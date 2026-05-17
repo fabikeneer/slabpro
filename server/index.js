@@ -24,20 +24,27 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // ── Seguridad HTTP ───────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
+// ── CORS (Vercel + local) ────────────────────────────────────────────────────
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
-  .map(o => o.trim());
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+console.log('[INFO] CORS orígenes permitidos:', allowedOrigins.join(', ') || '(ninguno)');
 
 app.use(cors({
-  origin: (origin, cb) => {
-    // Permitir peticiones sin origin (Postman, curl, server-to-server)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS bloqueado para origen: ${origin}`));
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalized)) return callback(null, true);
+    console.warn('[CORS] Origen rechazado:', origin);
+    return callback(null, false);
   },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
