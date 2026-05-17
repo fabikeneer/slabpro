@@ -5,6 +5,22 @@ require('dotenv').config();
 const useSsl = process.env.DB_SSL === 'true';
 const dbName = process.env.DB_NAME || 'slabpro_bd';
 
+// Diagnóstico al arranque (sin mostrar contraseñas)
+const requiredEnv = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'JWT_SECRET'];
+for (const key of requiredEnv) {
+  if (!process.env[key]) {
+    console.error(`[FATAL] Falta la variable de entorno: ${key}`);
+  }
+}
+console.log('[INFO] Config DB:', {
+  host: process.env.DB_HOST || '(vacío)',
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || '(vacío)',
+  database: dbName,
+  ssl: useSsl,
+  sslStrict: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
+});
+
 const pool = mysql.createPool({
   host:     process.env.DB_HOST     || 'localhost',
   user:     process.env.DB_USER     || 'root',
@@ -15,10 +31,11 @@ const pool = mysql.createPool({
   connectionLimit:    10,
   queueLimit:         0,
   connectTimeout:     30000,
+  // TiDB Cloud en Render: sin CA en disco, rejectUnauthorized=false por defecto
   ...(useSsl && {
     ssl: {
       minVersion: 'TLSv1.2',
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
     },
   }),
 });
