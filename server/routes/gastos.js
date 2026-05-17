@@ -110,7 +110,7 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Error en GET /gastos:', error);
-        res.status(500).json({ error: `Error al obtener gastos: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al obtener gastos.' });
     }
 });
 
@@ -121,7 +121,7 @@ router.post('/', async (req, res) => {
         const { categoria, descripcion, monto_usd, tasa_usdt, id_proyecto, fecha_gasto } = req.body;
 
         if (!categoria || !descripcion || !monto_usd) {
-            return res.status(400).json({ error: 'Categoría, descripción y monto son requeridos' });
+            return res.status(400).json({ success: false, message: 'Categoría, descripción y monto son requeridos.' });
         }
 
         const tasa    = parseFloat(tasa_usdt) || 0;
@@ -138,7 +138,7 @@ router.post('/', async (req, res) => {
         res.status(201).json({ success: true, id_gasto: result.insertId });
     } catch (error) {
         console.error('Error en POST /gastos:', error);
-        res.status(500).json({ error: `Error al crear gasto: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al crear el gasto.' });
     }
 });
 
@@ -164,7 +164,7 @@ router.put('/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error en PUT /gastos/:id:', error);
-        res.status(500).json({ error: `Error al actualizar gasto: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al actualizar el gasto.' });
     }
 });
 
@@ -175,7 +175,7 @@ router.delete('/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error en DELETE /gastos/:id:', error);
-        res.status(500).json({ error: `Error al eliminar gasto: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al eliminar el gasto.' });
     }
 });
 
@@ -236,7 +236,7 @@ router.get('/reporte', async (req, res) => {
         });
     } catch (error) {
         console.error('Error en GET /gastos/reporte:', error);
-        res.status(500).json({ error: `Error al generar reporte: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al generar el reporte.' });
     }
 });
 

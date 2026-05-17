@@ -1,22 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const jwt = require('jsonwebtoken');
-
-// Middleware de autenticación para rutas protegidas
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Token requerido.' });
-  }
-  try {
-    const token = authHeader.split(' ')[1];
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'slabpro_super_secret_key_123');
-    next();
-  } catch {
-    return res.status(401).json({ success: false, message: 'Token inválido.' });
-  }
-};
+const authMiddleware = require('../middlewares/authMiddleware');
 
 // Rutas públicas
 router.post('/login', authController.login);

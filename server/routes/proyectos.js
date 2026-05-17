@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
     res.json({ success: true, data: rows });
   } catch (err) {
     console.error('Error GET /proyectos:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener proyectos.' });
   }
 });
 
@@ -58,7 +58,7 @@ router.get('/activos', async (req, res) => {
     res.json({ success: true, data: rows });
   } catch (err) {
     console.error('Error GET /proyectos/activos:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener proyectos activos.' });
   }
 });
 
@@ -110,7 +110,7 @@ router.get('/:id/ficha', async (req, res) => {
     });
   } catch (err) {
     console.error('Error GET /proyectos/:id/ficha:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener la ficha del proyecto.' });
   }
 });
 
@@ -133,7 +133,7 @@ router.get('/:id', async (req, res) => {
     res.json({ success: true, data: proyecto });
   } catch (err) {
     console.error('Error GET /proyectos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener el proyecto.' });
   }
 });
 
@@ -182,7 +182,7 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Error POST /proyectos:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al crear el proyecto.' });
   }
 });
 
@@ -236,7 +236,7 @@ router.put('/:id', async (req, res) => {
     res.json({ success: true, message: 'Proyecto actualizado correctamente.' });
   } catch (err) {
     console.error('Error PUT /proyectos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al actualizar el proyecto.' });
   }
 });
 
@@ -268,7 +268,7 @@ router.patch('/:id/estado', async (req, res) => {
     res.json({ success: true, message: `Estado actualizado a "${estado}".` });
   } catch (err) {
     console.error('Error PATCH /proyectos/:id/estado:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al cambiar el estado.' });
   }
 });
 
@@ -299,7 +299,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ success: true, message: 'Proyecto eliminado correctamente.' });
   } catch (err) {
     console.error('Error DELETE /proyectos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al eliminar el proyecto.' });
   }
 });
 

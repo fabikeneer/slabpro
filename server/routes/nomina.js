@@ -51,7 +51,7 @@ router.post('/registrar', async (req, res) => {
     } catch (error) {
         await conn.rollback();
         console.error('Error en POST /nomina/registrar:', error);
-        res.status(500).json({ success: false, error: `Error al procesar el pago: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al procesar el pago.' });
     } finally {
         // Siempre liberar la conexión al final para no agotar el pool
         conn.release();
@@ -107,7 +107,7 @@ router.get('/reporte', async (req, res) => {
         });
     } catch (error) {
         console.error('Error en GET /nomina/reporte:', error);
-        res.status(500).json({ error: `Error al obtener el reporte: ${error.message}` });
+        res.status(500).json({ success: false, message: 'Error al obtener el reporte.' });
     }
 });
 
@@ -116,10 +116,10 @@ router.get('/empleados', async (req, res) => {
     try {
         // Solo devolvemos los empleados con estado 'Activo'
         const [rows] = await db.query("SELECT * FROM empleados WHERE estado = 'Activo' ORDER BY nombre ASC");
-        res.json(rows);
+        res.json({ success: true, data: rows });
     } catch (error) {
         console.error('Error obteniendo empleados:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, message: 'Error al obtener empleados.' });
     }
 });
 
@@ -134,7 +134,7 @@ router.post('/empleados', async (req, res) => {
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
         console.error('Error creando empleado:', error);
-        res.status(500).json({ error: 'Error al crear empleado' });
+        res.status(500).json({ success: false, message: 'Error al crear empleado.' });
     }
 });
 
@@ -149,7 +149,7 @@ router.put('/empleados/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error actualizando empleado:', error);
-        res.status(500).json({ error: 'Error al actualizar empleado' });
+        res.status(500).json({ success: false, message: 'Error al actualizar empleado.' });
     }
 });
 
@@ -161,7 +161,7 @@ router.delete('/empleados/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error eliminando empleado:', error);
-        res.status(500).json({ error: 'Error al cambiar el estado del empleado a inactivo' });
+        res.status(500).json({ success: false, message: 'Error al cambiar el estado del empleado a inactivo.' });
     }
 });
 
@@ -180,18 +180,7 @@ router.get('/proyectos', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error('Error obteniendo proyectos:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// DEBUG SCHEMA
-router.get('/debug_schema', async (req, res) => {
-    try {
-        const [emp] = await db.query('DESCRIBE empleados');
-        const [proy] = await db.query('DESCRIBE proyectos');
-        res.json({ empleados: emp, proyectos: proy });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, message: 'Error al obtener proyectos.' });
     }
 });
 

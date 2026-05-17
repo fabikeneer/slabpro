@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, data: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener clientes.' });
   }
 });
 
@@ -37,7 +37,7 @@ router.get('/:id', async (req, res) => {
     if (!cliente) return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     res.json({ success: true, data: cliente });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener el cliente.' });
   }
 });
 
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ success: true, data: { id: result.insertId, nombre } });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al crear el cliente.' });
   }
 });
 
@@ -69,7 +69,7 @@ router.put('/:id', async (req, res) => {
     );
     res.json({ success: true, message: 'Cliente actualizado.' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al actualizar el cliente.' });
   }
 });
 

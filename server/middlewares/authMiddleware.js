@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'slabpro_super_secret_key_123';
+
+if (!process.env.JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET no está definido en .env — servidor detenido.');
+  process.exit(1);
+}
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -11,10 +15,10 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // Guardar la información del usuario en el request
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ success: false, message: 'Token inválido o expirado.' });
   }
 };

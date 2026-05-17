@@ -27,19 +27,27 @@ router.get('/', async (req, res) => {
       ORDER BY p.created_at DESC
     `);
 
-    // Para cada presupuesto, traer sus líneas de detalle
-    for (const presupuesto of rows) {
-      const [lineas] = await db.query(
-        'SELECT * FROM presupuesto_lineas WHERE presupuesto_id = ? ORDER BY orden ASC',
-        [presupuesto.id]
+    // Cargar todas las líneas en una sola query y agruparlas por presupuesto
+    let lineasPorId = {};
+    if (rows.length > 0) {
+      const ids = rows.map(p => p.id);
+      const [todasLineas] = await db.query(
+        'SELECT * FROM presupuesto_lineas WHERE presupuesto_id IN (?) ORDER BY presupuesto_id, orden ASC',
+        [ids]
       );
-      presupuesto.lineas = lineas;
+      for (const linea of todasLineas) {
+        if (!lineasPorId[linea.presupuesto_id]) lineasPorId[linea.presupuesto_id] = [];
+        lineasPorId[linea.presupuesto_id].push(linea);
+      }
+    }
+    for (const presupuesto of rows) {
+      presupuesto.lineas = lineasPorId[presupuesto.id] || [];
     }
 
     res.json({ success: true, data: rows });
   } catch (err) {
     console.error('Error GET /presupuestos:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener presupuestos.' });
   }
 });
 
@@ -72,7 +80,7 @@ router.get('/:id', async (req, res) => {
     res.json({ success: true, data: presupuesto });
   } catch (err) {
     console.error('Error GET /presupuestos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al obtener el presupuesto.' });
   }
 });
 
@@ -220,7 +228,7 @@ router.post('/', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error('Error POST /presupuestos:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al crear el presupuesto.' });
   } finally {
     conn.release();
   }
@@ -332,7 +340,7 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error('Error PUT /presupuestos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al actualizar el presupuesto.' });
   } finally {
     conn.release();
   }
@@ -417,7 +425,7 @@ router.patch('/:id/estatus', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error('Error PATCH /presupuestos/:id/estatus:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al actualizar el estatus.' });
   } finally {
     conn.release();
   }
@@ -448,7 +456,7 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error('Error DELETE /presupuestos/:id:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Error al eliminar el presupuesto.' });
   } finally {
     conn.release();
   }

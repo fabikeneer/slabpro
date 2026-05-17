@@ -9,7 +9,7 @@ try {
   console.log('Nodemailer no está instalado. Fallback a consola para envío de correos.');
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'slabpro_super_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '24h';
 
 // Almacén en memoria para los códigos de recuperación: { cedula: { code, expires, verified } }
@@ -88,7 +88,7 @@ const authService = {
     // Intentar obtener el logo de la empresa para el correo
     let logoHtml = '';
     try {
-      const [config] = await pool.query('SELECT logo_data, nombre FROM config_empresa LIMIT 1');
+      const [config] = await pool.query('SELECT logo_data, nombre FROM configuracion_empresa LIMIT 1');
       if (config.length > 0 && config[0].logo_data) {
         logoHtml = `<div style="text-align: center; margin-bottom: 20px;">
                       <img src="${config[0].logo_data}" alt="Logo" style="max-height: 80px; width: auto;" />
