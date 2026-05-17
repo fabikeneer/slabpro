@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toastError, toastSuccess } from '../utils/alerts';
-import axios from 'axios';
+import api from '../utils/api';
 
 export default function RecoverPage() {
   const [step, setStep] = useState(1);
@@ -31,7 +31,7 @@ export default function RecoverPage() {
     if (!cedula) return toastError('Ingresa tu cédula');
     setLoading(true);
     try {
-      const { data } = await axios.post('/api/auth/recover/methods', { cedula: cedula.trim() });
+      const { data } = await api.post('/api/auth/recover/methods', { cedula: cedula.trim() });
       if (data.success) {
         if (!data.hasQuestions && !data.hasEmail) {
           toastError('No tienes métodos de recuperación configurados. Contacta al administrador.');
@@ -61,7 +61,7 @@ export default function RecoverPage() {
       // Buscar la pregunta al azar
       setLoading(true);
       try {
-        const { data } = await axios.post('/api/auth/recover/question/random', { cedula: cedula.trim() });
+        const { data } = await api.post('/api/auth/recover/question/random', { cedula: cedula.trim() });
         setPregunta(data.pregunta);
         setStep(3); // Mostrar pregunta
       } catch (err) {
@@ -79,7 +79,7 @@ export default function RecoverPage() {
     if (!email) return toastError('Ingresa tu correo');
     setLoading(true);
     try {
-      const { data } = await axios.post('/api/auth/recover/email/send-code', { cedula: cedula.trim(), email: email.trim() });
+      const { data } = await api.post('/api/auth/recover/email/send-code', { cedula: cedula.trim(), email: email.trim() });
       if (data.success) {
         toastSuccess('Código enviado al correo.');
         setStep(5); // Mostrar ingreso de código
@@ -96,7 +96,7 @@ export default function RecoverPage() {
     if (!code) return toastError('Ingresa el código');
     setLoading(true);
     try {
-      const { data } = await axios.post('/api/auth/recover/email/verify-code', { cedula: cedula.trim(), code: code.trim() });
+      const { data } = await api.post('/api/auth/recover/email/verify-code', { cedula: cedula.trim(), code: code.trim() });
       if (data.success) {
         setStep(6); // Mostrar nueva contraseña (flujo email)
       }
@@ -115,7 +115,7 @@ export default function RecoverPage() {
     setLoading(true);
     try {
       const payload = method === 'pregunta' ? { pregunta, respuesta } : {};
-      const { data } = await axios.post('/api/auth/recover/reset', {
+      const { data } = await api.post('/api/auth/recover/reset', {
         cedula: cedula.trim(),
         tipoRecuperacion: method,
         payload,

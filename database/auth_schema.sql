@@ -9,11 +9,16 @@ USE slabpro_bd;
 CREATE TABLE IF NOT EXISTS usuarios (
   id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   usuario             VARCHAR(50)  NOT NULL UNIQUE,
+  cedula              VARCHAR(20)  DEFAULT NULL,
+  nombre              VARCHAR(100) DEFAULT NULL,
+  email               VARCHAR(150) DEFAULT NULL,
   password_hash       VARCHAR(255) NOT NULL,
-  pregunta_seguridad  VARCHAR(150) NOT NULL,
-  respuesta_hash      VARCHAR(255) NOT NULL,
+  pregunta_seguridad  TEXT         NOT NULL,
+  respuesta_hash      TEXT         NOT NULL,
   created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_usuarios_cedula (cedula),
+  UNIQUE KEY uk_usuarios_email (email)
 ) ENGINE=InnoDB;
 
 -- Insertar usuario administrador por defecto

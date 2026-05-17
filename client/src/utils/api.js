@@ -1,6 +1,9 @@
 import axios from 'axios';
+import { API_BASE } from './apiBase';
 
-const api = axios.create();
+const api = axios.create({
+  baseURL: API_BASE || undefined,
+});
 
 // Interceptor: adjunta el JWT a cada petición automáticamente
 api.interceptors.request.use((config) => {

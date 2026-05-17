@@ -125,6 +125,7 @@ const authController = {
       res.json({ success: true, message: 'Correo actualizado.' });
     } catch (error) {
       if (error.message === 'PASSWORD_INCORRECTO') return res.status(401).json({ success: false, message: 'Contraseña actual incorrecta.' });
+      if (error.message === 'EMAIL_YA_REGISTRADO') return res.status(409).json({ success: false, message: 'Este correo ya está registrado en otro usuario.' });
       res.status(500).json({ success: false, message: 'Error interno.' });
     }
   },

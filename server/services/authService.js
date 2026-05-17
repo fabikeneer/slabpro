@@ -15,6 +15,25 @@ const JWT_EXPIRES_IN = '24h';
 // Almacén en memoria para los códigos de recuperación: { cedula: { code, expires, verified } }
 const resetCodes = new Map();
 
+function normalizeEmail(email) {
+  if (!email || typeof email !== 'string') return null;
+  const trimmed = email.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+async function assertEmailAvailable(email, excludeUserId = null) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  const sql = excludeUserId
+    ? 'SELECT id FROM usuarios WHERE LOWER(TRIM(email)) = ? AND id != ? LIMIT 1'
+    : 'SELECT id FROM usuarios WHERE LOWER(TRIM(email)) = ? LIMIT 1';
+  const params = excludeUserId ? [normalized, excludeUserId] : [normalized];
+  const [rows] = await pool.query(sql, params);
+  if (rows.length > 0) throw new Error('EMAIL_YA_REGISTRADO');
+  return normalized;
+}
+
 const authService = {
   // Login por cédula
   async login(cedula, password) {
@@ -229,7 +248,8 @@ const authService = {
     const match = await bcrypt.compare(passwordActual, rows[0].password_hash);
     if (!match) throw new Error('PASSWORD_INCORRECTO');
 
-    await pool.query('UPDATE usuarios SET email = ? WHERE id = ?', [email || null, userId]);
+    const normalizedEmail = await assertEmailAvailable(email, userId);
+    await pool.query('UPDATE usuarios SET email = ? WHERE id = ?', [normalizedEmail, userId]);
     return true;
   },
 

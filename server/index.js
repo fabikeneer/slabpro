@@ -15,9 +15,13 @@ const dashboardRouter     = require('./routes/dashboard');
 const configRouter        = require('./routes/config.routes');
 const exchangeRateService = require('./services/exchangeRate');
 const authMiddleware      = require('./middlewares/authMiddleware');
+const ensureUsuariosUnique = require('./migrations/ensureUsuariosUnique');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
+
+// Render / proxies reversos (rate-limit y IP reales)
+app.set('trust proxy', 1);
 
 // ── Seguridad HTTP ───────────────────────────────────────────────────────────
 app.use(helmet());
@@ -97,6 +101,8 @@ app.use((err, req, res, _next) => {
 });
 
 // ── Iniciar servidor ─────────────────────────────────────────────────────────
+ensureUsuariosUnique();
+
 app.listen(PORT, () => {
   console.log(`[INFO] SlabPro Server corriendo en http://localhost:${PORT}`);
   console.log(`[INFO] Endpoints disponibles:`);

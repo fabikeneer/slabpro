@@ -1,0 +1,14 @@
+# Despliegue del API en Render — https://render.com
+# Conecta el repo y Render detectará este archivo (Blueprint).
+services:
+  - type: web
+    name: slabpro-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

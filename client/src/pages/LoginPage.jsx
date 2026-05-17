@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { toastError, toastSuccess } from '../utils/alerts';
+import api from '../utils/api';
 
 export default function LoginPage() {
   const [cedula, setCedula]     = useState('');
@@ -21,13 +22,10 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cedula: cedula.trim(), password })
+      const { data } = await api.post('/api/auth/login', {
+        cedula: cedula.trim(),
+        password,
       });
-
-      const data = await response.json();
 
       if (data.success) {
         login(data.token, data.user);
@@ -38,7 +36,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Error en login:', error);
-      toastError('Error de conexión con el servidor');
+      toastError(error.response?.data?.message || 'Error de conexión con el servidor');
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useBudget, TIPOS_LINEA, TIPOS_PIEDRA } from '../hooks/useBudget';
 import { useFetch } from '../hooks/useFetch';
 import { generarPDF } from '../utils/pdfGenerator';
+import api from '../utils/api';
 
 // ── Formato de moneda ─────────────────────────────────────────────────────
 const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -48,10 +49,9 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
     try {
       setSyncingRate(true);
       if (force) {
-        await fetch('/api/exchange-rate/force', { method: 'POST' });
+        await api.post('/api/exchange-rate/force');
       }
-      const res = await fetch('/api/exchange-rate');
-      const data = await res.json();
+      const { data } = await api.get('/api/exchange-rate');
       if (data.rate) {
         setField('tasa_cambio_usd_bs', data.rate);
       }
