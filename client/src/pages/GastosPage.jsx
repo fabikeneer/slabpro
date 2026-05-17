@@ -4,8 +4,9 @@ import { es } from 'date-fns/locale/es';
 import 'react-datepicker/dist/react-datepicker.css';
 import api from '../utils/api';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
+import { useFetch } from '../hooks/useFetch';
 
 registerLocale('es', es);
 
@@ -59,6 +60,9 @@ function getRange(periodo) {
 }
 
 export default function GastosPage() {
+  const { data: configData } = useFetch('/api/config');
+  const configEmpresa = configData?.data || null;
+
   const [tab, setTab] = useState('historial');
   const [gastos, setGastos] = useState([]);
   const [totalesCat, setTotalesCat] = useState([]);
@@ -190,102 +194,219 @@ export default function GastosPage() {
         }
       });
 
-      const doc = new jsPDF();
-      const pageW = doc.internal.pageSize.getWidth();
+      // ── Paleta idéntica al diseño de Nómina / Presupuesto ─────────────────
+      const C = {
+        headerBg:   [26, 18, 4],
+        accentGold: [254, 183, 44],
+        textPrimary:[26, 18, 4],
+        textMuted:  [92, 79, 55],
+        white:      [255, 255, 255],
+        divider:    [237, 232, 220],
+        rowAlt:     [255, 251, 240],
+      };
 
-      // Header
-      doc.setFillColor(10, 15, 30);
-      doc.rect(0, 0, pageW, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-      doc.text('SLABPRO', 14, 18);
-      doc.setFontSize(11); doc.setFont('helvetica', 'normal');
-      doc.text('Sistema de Gestión — Reporte de Gastos', 14, 28);
-      doc.setFontSize(9);
-      doc.text(`Generado: ${new Date().toLocaleDateString('es-VE')} ${new Date().toLocaleTimeString('es-VE')}`, pageW - 14, 28, { align: 'right' });
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+      const MARGIN = 14;
 
-      // Período
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-      doc.text('PERÍODO DEL REPORTE', 14, 52);
+      // ── ENCABEZADO ────────────────────────────────────────────────────────
+      const nombreEmpresa = configEmpresa?.nombre_empresa || 'Marmolería Maracay';
+      const logoX = MARGIN;
+      const logoY = 12;
+      const logoW = 38;
+      const logoH = 22;
+      const textX = logoX + logoW + 6; // texto a la derecha del logo
+
+      if (configEmpresa?.logo_data) {
+        try {
+          doc.addImage(configEmpresa.logo_data, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+        } catch {
+          doc.setTextColor(...C.textPrimary);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.text(nombreEmpresa.toUpperCase(), logoX, logoY + 12);
+        }
+      } else {
+        doc.setTextColor(...C.textPrimary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text(nombreEmpresa.toUpperCase(), logoX, logoY + 12);
+      }
+
+      // Nombre, RIF y teléfono a la derecha del logo
+      doc.setTextColor(...C.textPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text(nombreEmpresa, textX, logoY + 7);
+
       doc.setFont('helvetica', 'normal');
-      doc.text(`${rangeActual.inicio.toLocaleDateString('es-VE')}  →  ${rangeActual.fin.toLocaleDateString('es-VE')}`, 14, 59);
-      if (filtroCat !== 'Todos') doc.text(`Categoría: ${filtroCat}`, 14, 66);
+      doc.setFontSize(8.5);
+      doc.setTextColor(...C.textMuted);
+      doc.text(`RIF: ${configEmpresa?.rif || 'J-12345678-9'}`, textX, logoY + 13);
+      doc.text(configEmpresa?.telefono || '0412-0000000', textX, logoY + 19);
 
-      // Tabla de gastos
-      const cols = ['Fecha', 'Categoría', 'Descripción', 'Monto USD', 'Monto Bs'];
-      const rows = data.gastos.map(g => [
-        fmtDate(g.fecha_gasto),
-        g.categoria,
-        g.descripcion.length > 50 ? g.descripcion.slice(0, 47) + '...' : g.descripcion,
-        fmtUSD(g.monto_usd),
-        fmtBs(g.monto_bs),
-      ]);
+      // Título alineado a la derecha
+      doc.setTextColor(...C.textPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('REPORTE DE GASTOS', W - MARGIN, 26, { align: 'right' });
 
-      doc.autoTable({
-        startY: filtroCat !== 'Todos' ? 72 : 65,
-        head: [cols],
-        body: rows,
-        theme: 'striped',
-        styles: { fontSize: 9, cellPadding: 4 },
-        headStyles: { fillColor: [10, 15, 30], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [245, 247, 250] },
+      let y = 44;
+
+      // ── INFO DEL REPORTE ──────────────────────────────────────────────────
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...C.accentGold);
+      doc.setFontSize(8);
+      doc.text('DATOS DEL REPORTE', MARGIN, y);
+
+      y += 5;
+      doc.setFontSize(10);
+      doc.setTextColor(...C.textPrimary);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Periodo:', MARGIN, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `${rangeActual.inicio.toLocaleDateString('es-VE')} → ${rangeActual.fin.toLocaleDateString('es-VE')}`,
+        MARGIN + 18, y
+      );
+
+      if (filtroCat !== 'Todos') {
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Categoría:', MARGIN, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(filtroCat, MARGIN + 22, y);
+      }
+
+      y += 10;
+
+      // ── TABLA DE GASTOS ───────────────────────────────────────────────────
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...C.accentGold);
+      doc.setFontSize(8);
+      doc.text('DETALLE DE GASTOS', MARGIN, y);
+      y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        head: [['FECHA', 'CATEGORÍA', 'DESCRIPCIÓN', 'MONTO (USD)', 'MONTO (Bs)']],
+        body: data.gastos.map(g => [
+          fmtDate(g.fecha_gasto),
+          g.categoria,
+          g.descripcion.length > 52 ? g.descripcion.slice(0, 49) + '…' : g.descripcion,
+          fmtUSD(g.monto_usd),
+          fmtBs(g.monto_bs),
+        ]),
+        styles: {
+          font: 'helvetica',
+          fontSize: 8.5,
+          cellPadding: 4,
+          textColor: C.textPrimary,
+          lineColor: C.divider,
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: C.headerBg,
+          textColor: C.white,
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        alternateRowStyles: { fillColor: C.rowAlt },
         columnStyles: {
-          0: { cellWidth: 24 },
+          0: { cellWidth: 22 },
           1: { cellWidth: 28 },
-          3: { halign: 'right', cellWidth: 28 },
-          4: { halign: 'right', cellWidth: 32 },
+          3: { halign: 'right', fontStyle: 'bold' },
+          4: { halign: 'right', textColor: C.textMuted },
         },
       });
 
-      let finalY = doc.lastAutoTable.finalY + 10;
+      y = doc.lastAutoTable.finalY + 10;
 
-      // Subtotales por categoría
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-      doc.text('RESUMEN POR CATEGORÍA', 14, finalY);
-      finalY += 6;
+      // ── RESUMEN POR CATEGORÍA ─────────────────────────────────────────────
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...C.accentGold);
+      doc.setFontSize(8);
+      doc.text('RESUMEN POR CATEGORÍA', MARGIN, y);
+      y += 3;
 
-      doc.autoTable({
-        startY: finalY,
-        head: [['Categoría', 'Cantidad', 'Total USD', 'Total Bs']],
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        head: [['CATEGORÍA', 'CANTIDAD', 'TOTAL (USD)', 'TOTAL (Bs)']],
         body: data.subtotales.map(s => [
           s.categoria, s.cantidad, fmtUSD(s.total_usd), fmtBs(s.total_bs)
         ]),
-        theme: 'grid',
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [30, 58, 95], textColor: 255 },
+        styles: {
+          font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 4,
+          textColor: C.textPrimary,
+          lineColor: C.divider,
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: C.headerBg,
+          textColor: C.white,
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        alternateRowStyles: { fillColor: C.rowAlt },
         columnStyles: {
-          2: { halign: 'right' },
-          3: { halign: 'right' },
+          1: { halign: 'center' },
+          2: { halign: 'right', fontStyle: 'bold' },
+          3: { halign: 'right', textColor: C.textMuted },
         },
       });
 
-      finalY = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 12;
 
-      // Total general
-      doc.setFillColor(10, 15, 30);
-      doc.rect(14, finalY, pageW - 28, 20, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL GENERAL DE GASTOS', 20, finalY + 8);
-      doc.text(fmtUSD(data.total_general.total_usd), pageW - 20, finalY + 8, { align: 'right' });
-      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-      doc.text(fmtBs(data.total_general.total_bs), pageW - 20, finalY + 15, { align: 'right' });
+      // ── TOTAL GENERAL (barra negra idéntica al presupuesto) ───────────────
+      doc.setFillColor(...C.headerBg);
+      doc.rect(MARGIN, y, W - MARGIN * 2, 14, 'F');
 
-      // Footer
+      doc.setFontSize(11);
+      doc.setTextColor(...C.white);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL GENERAL DE GASTOS', MARGIN + 4, y + 9);
+      doc.text(
+        `${fmtUSD(data.total_general.total_usd)}  /  ${fmtBs(data.total_general.total_bs)}`,
+        W - MARGIN - 4, y + 9, { align: 'right' }
+      );
+
+      // ── FOOTER en todas las páginas ───────────────────────────────────────
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setTextColor(150);
+        const footerY = H - 15;
+
+        doc.setDrawColor(...C.divider);
+        doc.setLineWidth(0.5);
+        doc.line(MARGIN, footerY - 5, W - MARGIN, footerY - 5);
+
         doc.setFontSize(8);
-        doc.text(`Página ${i} de ${pageCount} — SlabPro © ${new Date().getFullYear()} Marmolería`, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+        doc.setTextColor(...C.textMuted);
+        const emailInfo = configEmpresa?.email    || 'contacto@empresa.com';
+        const telInfo   = configEmpresa?.telefono || '0412-0000000';
+        const dirInfo   = configEmpresa?.direccion|| 'Maracay, Aragua';
+        doc.text(`${emailInfo}  |  ${telInfo}  |  ${dirInfo}`, W - MARGIN, footerY, { align: 'right' });
+
+        doc.setFillColor(...C.textPrimary);
+        doc.rect(0, footerY + 5, W, 10, 'F');
+
+        doc.setFontSize(7.5);
+        doc.setTextColor(...C.white);
+        doc.text(`Página ${i} de ${pageCount}`, MARGIN, footerY + 11);
+        doc.text(`SlabPro © ${new Date().getFullYear()}`, W - MARGIN, footerY + 11, { align: 'right' });
       }
 
       const per = PERIODOS.find(p => p.value === periodo)?.label || 'Personalizado';
-      doc.save(`Reporte_Gastos_${per.replace(/\s/g,'_')}_${new Date().toLocaleDateString('es-VE').replace(/\//g,'-')}.pdf`);
+      doc.save(`Reporte_Gastos_${per.replace(/\s/g, '_')}_${new Date().toLocaleDateString('es-VE').replace(/\//g, '-')}.pdf`);
       toastSuccess('PDF generado con éxito');
     } catch (er) {
-      toastError(er.response?.data?.error || er.message || 'Error al generar PDF');
+      console.error(er);
+      toastError('Error al generar el PDF de gastos.');
     }
   };
 

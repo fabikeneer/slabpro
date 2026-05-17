@@ -4,7 +4,14 @@ import { es } from 'date-fns/locale/es';
 import "react-datepicker/dist/react-datepicker.css";
 import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
-import { exportarReportePDFProfesional, descargarComprobanteProfesional } from '../utils/nominaPdf';
+import {
+    exportarReportePDFProfesional,
+    descargarComprobanteProfesional,
+    generarRecibosMultiplesPDF,
+    pagoARecibo,
+    empleadoARecibo,
+    comprobanteARecibo,
+} from '../utils/nominaPdf';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 
 const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
@@ -61,6 +68,8 @@ export default function NominaPage() {
     const [loadingEmp, setLoadingEmp] = useState(false);
 
     const [syncingRate, setSyncingRate] = useState(false);
+    const [selectedPagoIds, setSelectedPagoIds] = useState([]);
+    const [selectedEmpIds, setSelectedEmpIds] = useState([]);
 
     const fetchExchangeRate = async (force = false) => {
         try {
@@ -95,6 +104,7 @@ export default function NominaPage() {
                 }
             });
             setReporte(data);
+            setSelectedPagoIds((data.pagos || []).map(p => p.id));
         } catch (error) {
             console.error('Error obteniendo reporte:', error);
             const errMsg = error.response?.data?.error || error.message || 'Error al generar el reporte';
@@ -169,6 +179,67 @@ export default function NominaPage() {
 
     const exportarReportePDF = () => {
         exportarReportePDFProfesional(reporte, startDate, endDate, idEmpleado, empleados, configEmpresa);
+    };
+
+    const togglePagoSeleccion = (id) => {
+        setSelectedPagoIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const toggleTodosPagos = () => {
+        if (!reporte?.pagos?.length) return;
+        const todos = reporte.pagos.map(p => p.id);
+        setSelectedPagoIds(prev => (prev.length === todos.length ? [] : todos));
+    };
+
+    const generarRecibosDesdeReporte = () => {
+        if (!reporte?.pagos?.length) {
+            toastError('Primero genera un reporte con pagos.');
+            return;
+        }
+        const pagosSel = reporte.pagos.filter(p => selectedPagoIds.includes(p.id));
+        if (pagosSel.length === 0) {
+            toastError('Selecciona al menos un pago para generar recibos.');
+            return;
+        }
+        const recibos = pagosSel.map(p => pagoARecibo(p, startDate, endDate));
+        const ok = generarRecibosMultiplesPDF(recibos, {
+            filename: `Recibos_Nomina_${startDate.toLocaleDateString('es-VE').replace(/\//g, '-')}.pdf`,
+        });
+        if (ok) toastSuccess(`${recibos.length} recibo(s) generados (3 por hoja).`);
+    };
+
+    const toggleEmpSeleccion = (id) => {
+        setSelectedEmpIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const toggleTodosEmpleados = () => {
+        const ids = empleadosFiltrados.map(e => e.id);
+        setSelectedEmpIds(prev => (prev.length === ids.length && ids.length > 0 ? [] : ids));
+    };
+
+    const generarRecibosDesdePersonal = () => {
+        const lista = empleadosFiltrados.filter(e => selectedEmpIds.includes(e.id));
+        if (lista.length === 0) {
+            toastError('Selecciona al menos un empleado del directorio.');
+            return;
+        }
+        const recibos = lista.map(emp => empleadoARecibo(emp, startDate, endDate));
+        const ok = generarRecibosMultiplesPDF(recibos, {
+            filename: `Recibos_Personal_${new Date().toLocaleDateString('es-VE').replace(/\//g, '-')}.pdf`,
+        });
+        if (ok) toastSuccess(`${recibos.length} recibo(s) en blanco generados (3 por hoja).`);
+    };
+
+    const generarRecibosPagoRecienGuardado = () => {
+        if (!pagoGuardado) return;
+        const recibo = comprobanteARecibo(pagoGuardado, startDate, endDate);
+        generarRecibosMultiplesPDF([recibo], {
+            filename: `Recibo_${(pagoGuardado.empleadoNombre || 'pago').replace(/\s+/g, '_')}.pdf`,
+        });
     };
 
     const montoBsCalculado = (parseFloat(nuevoPago.monto_usd) || 0) * (parseFloat(nuevoPago.tasa_dia) || 0);
@@ -467,13 +538,22 @@ export default function NominaPage() {
                                         Se guardó el pago de {fmtUSD(pagoGuardado.monto_usd)} para {pagoGuardado.empleadoNombre}.
                                     </p>
                                 </div>
-                                <button 
-                                    onClick={() => descargarComprobante(pagoGuardado)}
-                                    className="btn btn-success"
-                                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                                >
-                                    Exportar Comprobante PDF
-                                </button>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => descargarComprobante(pagoGuardado)}
+                                        className="btn btn-success"
+                                    >
+                                        Comprobante detallado
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={generarRecibosPagoRecienGuardado}
+                                        className="btn btn-primary"
+                                    >
+                                        Recibo de pago (formulario)
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -487,13 +567,25 @@ export default function NominaPage() {
                                         Total Nómina del Periodo: {fmtUSD(reporte.resumen.total_usd)} / {fmtBs(reporte.resumen.total_bs)}
                                     </h3>
                                 </div>
-                                <button 
-                                    onClick={exportarReportePDF}
-                                    className="btn btn-primary"
-                                    style={{ display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 0 10px rgba(59,130,246,0.5)' }}
-                                >
-                                    Exportar PDF
-                                </button>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        onClick={generarRecibosDesdeReporte}
+                                        className="btn btn-success"
+                                        disabled={!selectedPagoIds.length}
+                                        title="Recibos tipo formulario físico, 3 por hoja A4"
+                                    >
+                                        Recibos múltiples ({selectedPagoIds.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={exportarReportePDF}
+                                        className="btn btn-primary"
+                                        style={{ boxShadow: '0 0 10px rgba(59,130,246,0.5)' }}
+                                    >
+                                        Exportar reporte PDF
+                                    </button>
+                                </div>
                             </div>
 
                             {reporte.pagos && reporte.pagos.length > 0 ? (
@@ -502,6 +594,15 @@ export default function NominaPage() {
                                         <table className="list-table">
                                             <thead>
                                                 <tr>
+                                                    <th style={{ width: 36 }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedPagoIds.length === reporte.pagos.length && reporte.pagos.length > 0}
+                                                            onChange={toggleTodosPagos}
+                                                            title="Seleccionar todos"
+                                                            style={{ accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                                                        />
+                                                    </th>
                                                     <th>Fecha</th>
                                                     <th>Trabajador</th>
                                                     <th>Concepto</th>
@@ -512,6 +613,14 @@ export default function NominaPage() {
                                             <tbody>
                                                 {reporte.pagos.map((pago) => (
                                                     <tr key={pago.id}>
+                                                        <td data-label="Seleccionar">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedPagoIds.includes(pago.id)}
+                                                                onChange={() => togglePagoSeleccion(pago.id)}
+                                                                style={{ accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                                                            />
+                                                        </td>
                                                         <td data-label="Fecha">{new Date(pago.fecha_pago).toLocaleDateString('es-VE')}</td>
                                                         <td data-label="Trabajador">{pago.trabajador || 'Desconocido'}</td>
                                                         <td data-label="Concepto">{pago.concepto}</td>
@@ -619,6 +728,29 @@ export default function NominaPage() {
                         </form>
                     </div>
 
+                    <div className="card" style={{ marginTop: 24 }}>
+                        <div className="card-header">
+                            <h3 className="card-title">Recibos de pago (impresión)</h3>
+                            <div className="card-subtitle">Formularios en blanco para firmar — 3 recibos por hoja A4</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div className="form-group" style={{ flex: '1 1 140px' }}>
+                                <label className="form-label">Semana desde:</label>
+                                <DatePicker selected={startDate} onChange={(date) => setStartDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                            </div>
+                            <div className="form-group" style={{ flex: '1 1 140px' }}>
+                                <label className="form-label">Semana hasta:</label>
+                                <DatePicker selected={endDate} onChange={(date) => setEndDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                            </div>
+                            <button type="button" onClick={toggleTodosEmpleados} className="btn btn-ghost" style={{ padding: '11px 16px' }}>
+                                {selectedEmpIds.length === empleadosFiltrados.length && empleadosFiltrados.length > 0 ? 'Quitar selección' : 'Seleccionar visibles'}
+                            </button>
+                            <button type="button" onClick={generarRecibosDesdePersonal} className="btn btn-success" disabled={!selectedEmpIds.length} style={{ padding: '11px 20px' }}>
+                                Generar recibos ({selectedEmpIds.length})
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Buscador y Lista de Personal */}
                     <div className="card" style={{ marginTop: 24 }}>
                         <div className="card-header" style={{ marginBottom: 0, borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
@@ -637,6 +769,15 @@ export default function NominaPage() {
                             <table className="list-table">
                                 <thead>
                                     <tr>
+                                        <th style={{ width: 36 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={empleadosFiltrados.length > 0 && selectedEmpIds.length === empleadosFiltrados.length}
+                                                onChange={toggleTodosEmpleados}
+                                                title="Seleccionar todos"
+                                                style={{ accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                                            />
+                                        </th>
                                         <th>ID</th>
                                         <th>Nombre Completo</th>
                                         <th>Cédula/RIF</th>
@@ -649,6 +790,14 @@ export default function NominaPage() {
                                     {empleadosFiltrados.length > 0 ? (
                                         empleadosFiltrados.map(emp => (
                                             <tr key={emp.id}>
+                                                <td data-label="Seleccionar">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedEmpIds.includes(emp.id)}
+                                                        onChange={() => toggleEmpSeleccion(emp.id)}
+                                                        style={{ accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
+                                                    />
+                                                </td>
                                                 <td data-label="ID">#{emp.id}</td>
                                                 <td data-label="Nombre" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{emp.nombre}</td>
                                                 <td data-label="Cédula/RIF">{emp.cedula_rif || '-'}</td>
@@ -684,7 +833,7 @@ export default function NominaPage() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="6" style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)' }}>
+                                            <td colSpan="7" style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)' }}>
                                                 No se encontraron empleados.
                                             </td>
                                         </tr>
