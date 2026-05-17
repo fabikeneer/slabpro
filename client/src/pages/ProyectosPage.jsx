@@ -1,6 +1,6 @@
 // pages/ProyectosPage.jsx — Con pestañas: Proyectos + Presupuestos
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -141,21 +141,21 @@ export default function ProyectosPage() {
     finalizados:proyectos.filter(p=>p.estatus==='Finalizado').length,
   };
 
-  const handleCrear = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.post('/api/proyectos',form); if(data.success){toastSuccess(data.message);setModalNuevo(false);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
+  const handleCrear = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await api.post('/api/proyectos',form); if(data.success){toastSuccess(data.message);setModalNuevo(false);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
 
   const abrirEditar = (p)=>{ setForm({nombre_proyecto:p.nombre_proyecto||'',nombre_cliente:p.nombre_cliente||'',rif_cedula:p.rif_cedula||'',descripcion_obra:p.descripcion_obra||'',estatus:p.estatus||'Activo',fecha_inicio:p.fecha_inicio?new Date(p.fecha_inicio).toISOString().split('T')[0]:new Date().toISOString().split('T')[0],monto_usd:p.monto_usd||''}); setModalEditar(p); };
 
-  const handleEditar = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await axios.put(`/api/proyectos/${modalEditar.id_proyecto}`,form); if(data.success){toastSuccess('Proyecto actualizado');setModalEditar(null);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
+  const handleEditar = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await api.put(`/api/proyectos/${modalEditar.id_proyecto}`,form); if(data.success){toastSuccess('Proyecto actualizado');setModalEditar(null);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
 
-  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await axios.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); toastSuccess(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch{ toastError('Error al cambiar estado'); } };
+  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await api.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); toastSuccess(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch{ toastError('Error al cambiar estado'); } };
 
-  const eliminarProyecto = async(p)=>{ const isConfirmed = await confirmAction('¿Eliminar proyecto?', `¿Estás seguro de eliminar el proyecto "${p.nombre_proyecto||p.nombre_cliente}"?`); if(!isConfirmed) return; try{ const {data}=await axios.delete(`/api/proyectos/${p.id_proyecto}`); if(data.success){toastSuccess('Eliminado');if(selectedId===p.id_proyecto)setSelectedId(null);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} };
+  const eliminarProyecto = async(p)=>{ const isConfirmed = await confirmAction('¿Eliminar proyecto?', `¿Estás seguro de eliminar el proyecto "${p.nombre_proyecto||p.nombre_cliente}"?`); if(!isConfirmed) return; try{ const {data}=await api.delete(`/api/proyectos/${p.id_proyecto}`); if(data.success){toastSuccess('Eliminado');if(selectedId===p.id_proyecto)setSelectedId(null);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} };
 
   const exportarPDF = async (proyectoId) => {
     if (!proyectoId) return;
     setLoadingPDF(proyectoId);
     try {
-      const { data } = await axios.get(`/api/proyectos/${proyectoId}/ficha`);
+      const { data } = await api.get(`/api/proyectos/${proyectoId}/ficha`);
       if (data.success) {
         generarFichaProyectoPDF({ ...data.data, configEmpresa });
         toastSuccess('Ficha PDF generada correctamente');

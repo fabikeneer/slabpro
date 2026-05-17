@@ -1,6 +1,5 @@
-import { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
+import api from '../utils/api';
 import { toastSuccess, toastError } from '../utils/alerts';
 
 const PREGUNTAS = [
@@ -63,8 +62,6 @@ const PasswordInput = ({ value, onChange, placeholder, show, onToggle }) => (
 );
 
 export default function ConfiguracionPage() {
-  const { token } = useContext(AuthContext);
-
   // Perfil
   const [perfil, setPerfil] = useState(null);
 
@@ -82,15 +79,13 @@ export default function ConfiguracionPage() {
   const [questions, setQuestions] = useState([ { id: Date.now(), selectValue: PREGUNTAS[0], customValue: '', respuesta: '' } ]);
   const [savingSec, setSavingSec] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
     try {
-      const r = await axios.get('/api/auth/settings/me', { headers });
+      const r = await api.get('/api/auth/settings/me');
       if (r.data.success) {
         setPerfil(r.data.data);
         setEmailForm(f => ({ ...f, email: r.data.data.email || '' }));
@@ -106,10 +101,10 @@ export default function ConfiguracionPage() {
     if (passForm.nuevaPassword.length < 6) return toastError('Mínimo 6 caracteres.');
     setSavingPass(true);
     try {
-      const { data } = await axios.put('/api/auth/settings/password', {
+      const { data } = await api.put('/api/auth/settings/password', {
         passwordActual: passForm.passwordActual,
         nuevaPassword: passForm.nuevaPassword,
-      }, { headers });
+      });
       if (data.success) {
         toastSuccess(data.message);
         setPassForm({ passwordActual: '', nuevaPassword: '', confirmar: '' });
@@ -125,10 +120,10 @@ export default function ConfiguracionPage() {
     e.preventDefault();
     setSavingEmail(true);
     try {
-      const { data } = await axios.put('/api/auth/settings/email', {
+      const { data } = await api.put('/api/auth/settings/email', {
         passwordActual: emailForm.passwordActual,
         email: emailForm.email,
-      }, { headers });
+      });
       if (data.success) {
         toastSuccess(data.message);
         setEmailForm(f => ({ ...f, passwordActual: '' }));
@@ -168,10 +163,10 @@ export default function ConfiguracionPage() {
         respuesta: q.respuesta
       }));
 
-      const { data } = await axios.put('/api/auth/settings/security-questions', {
+      const { data } = await api.put('/api/auth/settings/security-questions', {
         passwordActual: secPassword,
         questions: qsArray,
-      }, { headers });
+      });
       
       if (data.success) {
         toastSuccess(data.message);

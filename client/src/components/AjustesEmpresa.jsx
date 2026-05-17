@@ -1,10 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
+import api from '../utils/api';
 import { toastSuccess, toastError } from '../utils/alerts';
 
 export default function AjustesEmpresa() {
-  const { token } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -18,7 +16,7 @@ export default function AjustesEmpresa() {
     logo_data: ''
   });
 
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = { Authorization: `Bearer ${localStorage.getItem('slabpro_token')}` };
 
   useEffect(() => {
     fetchConfig();
@@ -26,7 +24,7 @@ export default function AjustesEmpresa() {
 
   const fetchConfig = async () => {
     try {
-      const { data } = await axios.get('/api/config', { headers });
+      const { data } = await api.get('/api/config', { headers });
       if (data.success && data.data) {
         setForm({
           nombre_empresa: data.data.nombre_empresa || '',
@@ -66,7 +64,7 @@ export default function AjustesEmpresa() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await axios.put('/api/config', form, { headers });
+      const { data } = await api.put('/api/config', form, { headers });
       if (data.success) {
         toastSuccess('Configuración guardada exitosamente.');
       }

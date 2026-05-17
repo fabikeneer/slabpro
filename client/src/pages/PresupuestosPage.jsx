@@ -1,6 +1,6 @@
 // pages/PresupuestosPage.jsx — Página del módulo de presupuestos
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
 import BudgetForm from '../components/BudgetForm';
@@ -59,7 +59,7 @@ export default function PresupuestosPage() {
   const cambiarEstatus = async (id, nuevoEstatus) => {
     setLoadingAccion(id);
     try {
-      const { data } = await axios.patch(`/api/presupuestos/${id}/estatus`, { estatus: nuevoEstatus });
+      const { data } = await api.patch(`/api/presupuestos/${id}/estatus`, { estatus: nuevoEstatus });
       if (data.success) {
         const msg = data.proyecto_creado
           ? `Aprobado. Proyecto "${data.proyecto_creado.nombre_proyecto}" creado automáticamente en Proyectos.`
@@ -76,7 +76,7 @@ export default function PresupuestosPage() {
 
   const editarPresupuesto = async (id) => {
     try {
-      const { data } = await axios.get(`/api/presupuestos/${id}`);
+      const { data } = await api.get(`/api/presupuestos/${id}`);
       if (data.success) {
         setPresupuestoEdit(data.data);
         setVista('nuevo');
@@ -90,7 +90,7 @@ export default function PresupuestosPage() {
     const isConfirmed = await confirmAction('¿Eliminar presupuesto?', 'Esta acción no se puede deshacer.');
     if (!isConfirmed) return;
     try {
-      const { data } = await axios.delete(`/api/presupuestos/${id}`);
+      const { data } = await api.delete(`/api/presupuestos/${id}`);
       if (data.success) {
         toastSuccess('Presupuesto eliminado correctamente.');
         refetch(true);

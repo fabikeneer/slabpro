@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale/es';
 import 'react-datepicker/dist/react-datepicker.css';
-import axios from 'axios';
+import api from '../utils/api';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
@@ -86,7 +86,7 @@ export default function GastosPage() {
   const fetchGastos = async (background = false) => {
     if (!background) setLoading(true);
     try {
-      const { data } = await axios.get('/api/gastos', {
+      const { data } = await api.get('/api/gastos', {
         params: {
           categoria: filtroCat !== 'Todos' ? filtroCat : undefined,
           inicio: rangeActual.inicio.toISOString(),
@@ -106,7 +106,7 @@ export default function GastosPage() {
 
   const fetchTasa = async () => {
     try {
-      const { data } = await axios.get('/api/exchange-rate');
+      const { data } = await api.get('/api/exchange-rate');
       if (data.rate) {
         setTasa(data.rate);
         setForm(f => ({ ...f, tasa_usdt: data.rate }));
@@ -115,7 +115,7 @@ export default function GastosPage() {
   };
 
   useEffect(() => {
-    axios.get('/api/nomina/proyectos').then(r => setProyectos(r.data)).catch(() => {});
+    api.get('/api/nomina/proyectos').then(r => setProyectos(r.data)).catch(() => {});
     fetchTasa();
   }, []);
 
@@ -136,9 +136,9 @@ export default function GastosPage() {
           : form.fecha_gasto,
       };
       if (editId) {
-        await axios.put(`/api/gastos/${editId}`, payload);
+        await api.put(`/api/gastos/${editId}`, payload);
       } else {
-        await axios.post('/api/gastos', payload);
+        await api.post('/api/gastos', payload);
       }
       setForm({ ...FORM_INIT, tasa_usdt: tasa });
       setEditId(null);
@@ -171,7 +171,7 @@ export default function GastosPage() {
     const isConfirmed = await confirmAction('¿Eliminar este gasto?', 'Esta acción no se puede deshacer.');
     if (!isConfirmed) return;
     try {
-      await axios.delete(`/api/gastos/${id}`);
+      await api.delete(`/api/gastos/${id}`);
       toastSuccess('Gasto eliminado');
       // Actualización en segundo plano sin spinner
       fetchGastos(true);
@@ -182,7 +182,7 @@ export default function GastosPage() {
 
   const exportarPDF = async () => {
     try {
-      const { data } = await axios.get('/api/gastos/reporte', {
+      const { data } = await api.get('/api/gastos/reporte', {
         params: {
           inicio: rangeActual.inicio.toISOString(),
           fin:    rangeActual.fin.toISOString(),

@@ -1,6 +1,6 @@
 // hooks/useBudget.js — Estado y lógica del Módulo de Presupuestos
 import { useState, useCallback, useMemo } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { toastSuccess, toastError } from '../utils/alerts';
 
 // ── Tipos de campo disponibles ────────────────────────────────────────────
@@ -170,10 +170,10 @@ export function useBudget() {
 
       let data;
       if (form.id) {
-        const res = await axios.put(`/api/presupuestos/${form.id}`, payload);
+        const res = await api.put(`/api/presupuestos/${form.id}`, payload);
         data = res.data;
       } else {
-        const res = await axios.post('/api/presupuestos', payload);
+        const res = await api.post('/api/presupuestos', payload);
         data = res.data;
       }
 

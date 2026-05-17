@@ -1,10 +1,10 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toastError } from '../utils/alerts';
-import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 
 export default function DashboardPage() {
-  const { token, user } = useContext(AuthContext);
+  const user = JSON.parse(localStorage.getItem('slabpro_user') || 'null');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,11 +15,7 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/dashboard/resumen', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await res.json();
-      
+      const { data: result } = await api.get('/api/dashboard/resumen');
       if (result.success) {
         setData(result.data);
       } else {

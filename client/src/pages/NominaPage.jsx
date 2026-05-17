@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale/es';
 import "react-datepicker/dist/react-datepicker.css";
-import axios from 'axios';
+import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
 import { exportarReportePDFProfesional, descargarComprobanteProfesional } from '../utils/nominaPdf';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
@@ -66,9 +66,9 @@ export default function NominaPage() {
         try {
             setSyncingRate(true);
             if (force) {
-                await axios.post('/api/exchange-rate/force');
+                await api.post('/api/exchange-rate/force');
             }
-            const { data } = await axios.get('/api/exchange-rate');
+            const { data } = await api.get('/api/exchange-rate');
             if (data.rate) {
                 setNuevoPago(prev => ({ ...prev, tasa_dia: data.rate }));
             }
@@ -87,7 +87,7 @@ export default function NominaPage() {
     const obtenerReporte = async () => {
         setLoading(true);
         try {
-            const { data } = await axios.get('/api/nomina/reporte', {
+            const { data } = await api.get('/api/nomina/reporte', {
                 params: {
                     id: idEmpleado,
                     inicio: startDate.toISOString(),
@@ -130,7 +130,7 @@ export default function NominaPage() {
             if (esExterno && externo.descripcion && !nuevoPago.concepto) {
                 payload.concepto = externo.descripcion;
             }
-            await axios.post('/api/nomina/registrar', payload);
+            await api.post('/api/nomina/registrar', payload);
             
             // Preparar datos para el comprobante
             const empleadoInfo = empleados.find(e => String(e.id) === String(nuevoPago.id_empleado));
@@ -196,10 +196,10 @@ export default function NominaPage() {
             };
 
             if (formEmp.id) {
-                await axios.put(`/api/nomina/empleados/${formEmp.id}`, payload);
+                await api.put(`/api/nomina/empleados/${formEmp.id}`, payload);
                 toastSuccess('Empleado actualizado');
             } else {
-                await axios.post('/api/nomina/empleados', payload);
+                await api.post('/api/nomina/empleados', payload);
                 toastSuccess('Empleado registrado');
             }
             setFormEmp({ id: null, nombre: '', cedula_rif: '', telefono: '', rol: [] });
@@ -227,7 +227,7 @@ export default function NominaPage() {
         const isConfirmed = await confirmAction('¿Eliminar empleado?', 'Esta acción no se puede deshacer.');
         if (!isConfirmed) return;
         try {
-            await axios.delete(`/api/nomina/empleados/${id}`);
+            await api.delete(`/api/nomina/empleados/${id}`);
             toastSuccess('Empleado eliminado');
             refetchEmp(true); // Recargar en segundo plano sin spinner
         } catch (error) {
