@@ -19,6 +19,7 @@ export async function generarPDF(form, totales, guardado = null, configEmpresa =
     container.style.top = '-9999px';
     container.style.left = '-9999px';
     container.style.width = '820px'; // Ancho base de la plantilla A4
+    container.style.fontSize = '16px'; // Fijar base para que los rem sean consistentes
     document.body.appendChild(container);
 
     const root = createRoot(container);

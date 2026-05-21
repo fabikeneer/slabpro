@@ -215,9 +215,9 @@ const styles = {
     minWidth: '0'
   },
   brandIcon: {
-    width: '140px',
+    width: '160px',
     height: 'auto',
-    maxHeight: '85px',
+    maxHeight: '100px',
     borderRadius: '0',
     border: 'none',
     display: 'flex',
@@ -227,20 +227,25 @@ const styles = {
     fontWeight: '700',
     flexShrink: '0'
   },
-  brandText: {},
+  brandText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px'
+  },
   brandTextStrong: {
     display: 'block',
-    fontSize: '1.15rem',
+    fontSize: '18px',
     letterSpacing: '0.01em',
     fontWeight: '800',
-    marginTop: '0'
+    marginTop: '0',
+    lineHeight: 1.2
   },
   brandTextSpan: {
     display: 'block',
-    fontSize: '0.8rem',
+    fontSize: '13px',
     fontWeight: '400',
     color: vars.inkSoft,
-    marginTop: '0.2rem',
+    marginTop: '2px',
     letterSpacing: '0.01em'
   },
   docTitleBlock: {
