@@ -117,11 +117,12 @@ const authService = {
     if (nodemailer && process.env.SMTP_USER) {
       const transporter = nodemailer.createTransport({
         service: 'gmail',
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        tls: { rejectUnauthorized: false }
       });
       try {
         transporter.sendMail({
-          from: `"${nombreEmpresa}" <${process.env.SMTP_USER}>`,
+          from: process.env.SMTP_USER,
           to: realEmail,
           subject: 'Código de Recuperación de Cuenta',
           text: `Tu código de recuperación es: ${code}\nEste código expirará en 10 minutos.`,
