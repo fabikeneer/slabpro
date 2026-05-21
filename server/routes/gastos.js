@@ -32,7 +32,10 @@ const db      = require('../db');
 // Retorna historial de gastos con filtros opcionales
 router.get('/', async (req, res) => {
     try {
-        const { categoria, inicio, fin, limit = 50, offset = 0 } = req.query;
+        const { categoria, inicio, fin } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = (page - 1) * limit;
 
         let sql = `
             SELECT
@@ -99,13 +102,22 @@ router.get('/', async (req, res) => {
         if (fin)    { sqlTotal += ` AND fecha_gasto <= ?`; paramsTotal.push(fin.split('T')[0]); }
         const [[totalGeneral]] = await db.query(sqlTotal, paramsTotal);
 
+        const totalRegistros = totalGeneral?.total_registros || 0;
+
         res.json({
+            success: true,
             gastos: rows,
             totales_por_categoria: totalesCat,
             total_general: {
-                total_usd: totalGeneral.total_usd || 0,
-                total_bs:  totalGeneral.total_bs  || 0,
-                total_registros: totalGeneral.total_registros || 0,
+                total_usd: totalGeneral?.total_usd || 0,
+                total_bs:  totalGeneral?.total_bs  || 0,
+                total_registros: totalRegistros,
+            },
+            pagination: {
+                total: totalRegistros,
+                page,
+                limit,
+                totalPages: Math.ceil(totalRegistros / limit)
             }
         });
     } catch (error) {

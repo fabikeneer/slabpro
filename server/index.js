@@ -4,6 +4,7 @@ const express    = require('express');
 const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 
 const presupuestosRouter  = require('./routes/presupuestos');
 const clientesRouter      = require('./routes/clientes');
@@ -46,7 +47,10 @@ app.use(cors({
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
+
+app.use(cookieParser());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

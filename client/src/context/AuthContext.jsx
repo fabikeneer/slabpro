@@ -1,41 +1,43 @@
 import { createContext, useState, useEffect } from 'react';
+import api from '../utils/api';
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restaurar sesión desde localStorage
-    const storedToken = localStorage.getItem('slabpro_token');
-    const storedUser = localStorage.getItem('slabpro_user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Verificar sesión con el servidor (la cookie HTTP-Only viaja automáticamente)
+    api.get('/api/auth/settings/me')
+      .then(res => {
+        if (res.data.success) {
+          setUser(res.data.data);
+        }
+      })
+      .catch(() => {
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const login = (newToken, userData) => {
-    setToken(newToken);
+    // El servidor ya asignó la cookie, solo actualizamos estado
     setUser(userData);
-    localStorage.setItem('slabpro_token', newToken);
-    localStorage.setItem('slabpro_user', JSON.stringify(userData));
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('slabpro_token');
-    localStorage.removeItem('slabpro_user');
+    api.post('/api/auth/logout').finally(() => {
+      setUser(null);
+      window.location.href = '/login';
+    });
   };
 
   const value = {
     user,
-    token,
+    token: 'cookie', // Por compatibilidad
     login,
     logout,
     loading

@@ -29,11 +29,28 @@ const db      = require('../db');
 // ─────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM proyectos');
+
     const [rows] = await db.query(`
       SELECT * FROM proyectos
       ORDER BY fecha_inicio DESC
-    `);
-    res.json({ success: true, data: rows });
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    res.json({ 
+      success: true, 
+      data: rows,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     console.error('Error GET /proyectos:', err);
     res.status(500).json({ success: false, message: 'Error al obtener proyectos.' });

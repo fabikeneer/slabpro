@@ -5,6 +5,7 @@ import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
 import { useConfiguracion } from '../hooks/useConfiguracion';
 import BudgetForm from '../components/BudgetForm';
+import Pagination from '../components/Pagination';
 import { generarPDF } from '../utils/pdfGenerator';
 
 const ESTATUS_BADGE = {
@@ -26,11 +27,14 @@ const ESTATUS_LABEL = {
 const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 
 export default function PresupuestosPage() {
-  const [vista, setVista]               = useState('lista');  // 'lista' | 'nuevo'
+  const [vista, setVista] = useState('lista');
   const [presupuestoEdit, setPresupuestoEdit] = useState(null);
+  const [page, setPage] = useState(1);
+  const limit = 20;
   
-  const { data: presData, loading: loadingLista, refetch } = useFetch('/api/presupuestos', {}, false);
+  const { data: presData, loading: loadingLista, refetch } = useFetch('/api/presupuestos', { page, limit }, false);
   const presupuestos = presData?.data || [];
+  const pagination = presData?.pagination;
   
   const { configData: configEmpresa } = useConfiguracion();
 
@@ -54,7 +58,7 @@ export default function PresupuestosPage() {
 
   useEffect(() => {
     if (vista === 'lista') refetch(true);
-  }, [vista]);
+  }, [vista, page]);
 
   /* ── Cambiar estatus ── */
   const cambiarEstatus = async (id, nuevoEstatus) => {
@@ -227,6 +231,7 @@ export default function PresupuestosPage() {
             <p>{busqueda ? 'Intenta con otro término.' : 'Crea tu primer presupuesto con el botón de arriba.'}</p>
           </div>
         ) : (
+          <>
           <div style={{ overflowX: 'auto' }}>
             <table className="list-table">
               <thead>
@@ -371,7 +376,13 @@ export default function PresupuestosPage() {
               </tbody>
             </table>
           </div>
-        )}
+          
+          <Pagination 
+            pagination={pagination} 
+            onPageChange={setPage} 
+          />
+        </>
+      )}
       </div>
     </div>
   );

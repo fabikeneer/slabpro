@@ -6,13 +6,19 @@ if (!process.env.JWT_SECRET) {
 }
 
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  // Primero busca en cookies, si no existe, busca en headers (para compatibilidad)
+  let token = req.cookies?.slabpro_token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado.' });
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado.' });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

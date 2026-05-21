@@ -7,11 +7,27 @@ const authController = {
       const { cedula, password } = req.body;
       if (!cedula || !password) return res.status(400).json({ success: false, message: 'Cédula y contraseña son requeridas.' });
       const { token, user } = await authService.login(cedula, password);
-      res.json({ success: true, token, user });
+      res.cookie('slabpro_token', token, {
+        httpOnly: true,
+        secure: true, // Requerido para sameSite: 'none'
+        sameSite: 'none',
+        maxAge: 24 * 60 * 60 * 1000 // 24h
+      });
+      res.json({ success: true, user });
     } catch (error) {
       if (error.message === 'CREDENCIALES_INVALIDAS') return res.status(401).json({ success: false, message: 'Cédula o contraseña incorrectas.' });
       res.status(500).json({ success: false, message: 'Error interno.' });
     }
+  },
+
+  // POST /api/auth/logout
+  async logout(req, res) {
+    res.clearCookie('slabpro_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none'
+    });
+    res.json({ success: true, message: 'Sesión cerrada.' });
   },
 
   // POST /api/auth/recover/methods

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
+import Pagination from '../components/Pagination';
 import { useConfiguracion } from '../hooks/useConfiguracion';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -108,13 +109,27 @@ function FormProyecto({ form, setForm, onSubmit, loading, modoEdicion }) {
 export default function ProyectosPage() {
   const [activeTab,    setActiveTab]    = useState('proyectos');
   
+  const [pageProy, setPageProy] = useState(1);
+  const [pagePres, setPagePres] = useState(1);
+  const limit = 20;
+
   // Custom Hook para peticiones en segundo plano (SRP)
-  const { data: proyData, loading: loadingProy, refetch: refetchProy } = useFetch('/api/proyectos');
-  const { data: presData, loading: loadingPres, refetch: refetchPres } = useFetch('/api/presupuestos');
+  const { data: proyData, loading: loadingProy, refetch: refetchProy } = useFetch('/api/proyectos', { page: pageProy, limit }, false);
+  const { data: presData, loading: loadingPres, refetch: refetchPres } = useFetch('/api/presupuestos', { page: pagePres, limit }, false);
   const { configData: configEmpresa } = useConfiguracion();
   
   const proyectos = proyData?.data || [];
+  const paginationProy = proyData?.pagination;
   const presupuestos = presData?.data || [];
+  const paginationPres = presData?.pagination;
+  
+  useEffect(() => {
+    if (activeTab === 'proyectos') refetchProy(true);
+  }, [activeTab, pageProy]);
+
+  useEffect(() => {
+    if (activeTab === 'presupuestos') refetchPres(true);
+  }, [activeTab, pagePres]);
 
   const [loadingForm,  setLoadingForm]  = useState(false);
   const [loadingPDF,   setLoadingPDF]   = useState(null);
@@ -242,7 +257,8 @@ export default function ProyectosPage() {
 
           {loadingProy?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
           :proyectosFiltrados.length===0?<div className="empty-state"><h3>{busquedaProy ? 'No hay resultados' : `Sin proyectos ${filtroEstatus!=='Todos'?`en "${filtroEstatus}"`:''}`}</h3><p>Crea uno con el botón de arriba o aprueba un presupuesto.</p></div>
-          :<div style={{overflowX:'auto'}}><table className="list-table">
+          :<>
+          <div style={{overflowX:'auto'}}><table className="list-table">
             <thead><tr><th style={{width:36}}></th><th>Proyecto / Cliente</th><th className="hide-on-mobile">RIF/Cédula</th><th className="hide-on-mobile">Descripción</th><th>Estatus</th><th>Monto USD</th><th className="hide-on-mobile">Inicio</th><th className="hide-on-mobile" style={{textAlign:'right'}}>Acciones</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>
               {proyectosFiltrados.map(p=>(
@@ -318,7 +334,9 @@ export default function ProyectosPage() {
                 </React.Fragment>
               ))}
             </tbody>
-          </table></div>}
+          </table></div>
+          <Pagination pagination={paginationProy} onPageChange={setPageProy} />
+          </>}
         </div>
       )}
 
@@ -341,7 +359,8 @@ export default function ProyectosPage() {
 
           {loadingPres?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
           :presFiltrados.length===0?<div className="empty-state"><h3>{busquedaPres ? 'No hay resultados' : `Sin presupuestos ${filtroPres!=='Todos'?`con estatus "${filtroPres}"`:''}`}</h3></div>
-          :<div style={{overflowX:'auto'}}><table className="list-table">
+          :<>
+          <div style={{overflowX:'auto'}}><table className="list-table">
             <thead><tr><th>N° Presupuesto</th><th>Cliente</th><th className="hide-on-mobile">Descripción</th><th>Total USD</th><th className="hide-on-mobile">Tasa</th><th>Estatus</th><th className="hide-on-mobile">Fecha</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>
               {presFiltrados.map(p=>(
@@ -381,7 +400,9 @@ export default function ProyectosPage() {
                 </React.Fragment>
               ))}
             </tbody>
-          </table></div>}
+          </table></div>
+          <Pagination pagination={paginationPres} onPageChange={setPagePres} />
+          </>}
         </div>
       )}
 

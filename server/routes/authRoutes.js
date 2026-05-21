@@ -5,6 +5,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 // Rutas públicas
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
 router.post('/recover/methods', authController.getRecoveryMethods);
 router.post('/recover/question/random', authController.getRandomQuestion);
 router.post('/recover/email/send-code', authController.sendRecoveryCode);

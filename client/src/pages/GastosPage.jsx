@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
+import Pagination from '../components/Pagination';
 import { useConfiguracion } from '../hooks/useConfiguracion';
 
 registerLocale('es', es);
@@ -95,12 +96,18 @@ export default function GastosPage() {
       }
     : getRange(periodo);
 
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
   const { data: gastosData, loading, refetch: refetchGastos } = useFetch('/api/gastos', {
     categoria: filtroCat !== 'Todos' ? filtroCat : undefined,
     inicio: rangeActual.inicio.toISOString(),
     fin:    rangeActual.fin.toISOString(),
-    limit: 100,
+    page,
+    limit,
   });
+  
+  const pagination = gastosData?.pagination;
 
   useEffect(() => {
     if (gastosData) {
@@ -687,6 +694,7 @@ export default function GastosPage() {
               </div>
             )}
           </div>
+          <Pagination pagination={pagination} onPageChange={setPage} />
         </>
       )}
     </div>
