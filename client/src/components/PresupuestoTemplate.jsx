@@ -125,7 +125,12 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
                       : l.cantidad
                   }
                 </td>
-                <td style={{...styles.td, textAlign: 'right', fontWeight: 600}}>{fmtUSD(l.subtotalUSD || (l.precio_unitario_usd * (l.metros_lineales || l.cantidad || 1)))}</td>
+                <td style={{...styles.td, textAlign: 'right', fontWeight: 600}}>
+                  {l.tipo === 'proyecto_completo'
+                    ? fmtUSD(l.precio_unitario_usd || l.subtotalUSD || 0)
+                    : fmtUSD(l.subtotalUSD || (l.precio_unitario_usd * (l.metros_lineales || l.cantidad || 1)))
+                  }
+                </td>
               </tr>
             )) : (
               <tr>
