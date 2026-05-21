@@ -19,13 +19,13 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
   
   const lineas = totales?.lineasCalculadas || form?.lineas || [];
   
-  // Calcular vencimiento si hay fecha de inicio y validez
-  let fechaVencimiento = '—';
-  if (form?.fecha_inicio && form?.validez_dias) {
-    const start = new Date(form.fecha_inicio);
-    start.setDate(start.getDate() + Number(form.validez_dias));
-    fechaVencimiento = start.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
+  // Calcular vencimiento desde la fecha de CREACIÓN del presupuesto + validez elegida
+  const fechaBase = guardado?.created_at || form?.created_at || new Date();
+  const validezDias = Number(guardado?.validez_dias || form?.validez_dias || 15);
+  const fechaCreacion = new Date(fechaBase);
+  const fechaVenc = new Date(fechaCreacion);
+  fechaVenc.setDate(fechaVenc.getDate() + validezDias);
+  const fechaVencimiento = fmtFecha(fechaVenc);
 
   return (
     <article className="page" style={styles.page}>
@@ -52,12 +52,12 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
         <section className="client-dates" style={styles.clientDates}>
           <div>
             <div className="label-gold" style={styles.labelGold}>Cliente</div>
-            <div className="client-name" style={styles.clientName}>{form?.cliente_nombre || 'Cliente Anónimo'}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 400, margin: '0 0 0.25rem', color: vars.ink, fontStyle: 'normal' }}>{form?.cliente_nombre || 'Cliente Anónimo'}</div>
             <p className="client-role" style={styles.clientRole}>{form?.cliente_rif || 'Sin RIF'}</p>
           </div>
           <div className="dates-col" style={styles.datesCol}>
-            <div><strong style={{ color: 'var(--ink)' }}>Fecha:</strong> {fmtFecha(form?.fecha_inicio || new Date())}</div>
-            <div><strong style={{ color: 'var(--ink)' }}>Vencimiento:</strong> {fechaVencimiento}</div>
+            <div><strong style={{ color: vars.ink }}>Fecha:</strong> {fmtFecha(fechaCreacion)}</div>
+            <div><strong style={{ color: vars.ink }}>Vencimiento:</strong> {fechaVencimiento}</div>
           </div>
         </section>
 
@@ -277,9 +277,10 @@ const styles = {
   },
   clientName: {
     fontSize: '1.25rem',
-    fontWeight: '400',
+    fontWeight: 400,
     margin: '0 0 0.25rem',
-    color: vars.ink
+    color: vars.ink,
+    fontStyle: 'normal'
   },
   clientRole: {
     fontSize: '0.8rem',
