@@ -67,7 +67,6 @@ export default function GastosPage() {
   const [gastos, setGastos] = useState([]);
   const [totalesCat, setTotalesCat] = useState([]);
   const [totalGeneral, setTotalGeneral] = useState({ total_usd: 0, total_bs: 0 });
-  const [loading, setLoading] = useState(false);
   const [proyectos, setProyectos] = useState([]);
   const [tasa, setTasa] = useState(0);
 
@@ -87,27 +86,20 @@ export default function GastosPage() {
     ? { inicio: customInicio, fin: customFin }
     : getRange(periodo);
 
-  const fetchGastos = async (background = false) => {
-    if (!background) setLoading(true);
-    try {
-      const { data } = await api.get('/api/gastos', {
-        params: {
-          categoria: filtroCat !== 'Todos' ? filtroCat : undefined,
-          inicio: rangeActual.inicio.toISOString(),
-          fin:    rangeActual.fin.toISOString(),
-          limit: 100,
-        }
-      });
-      setGastos(data.gastos || []);
-      setTotalesCat(data.totales_por_categoria || []);
-      setTotalGeneral(data.total_general || { total_usd: 0, total_bs: 0 });
-    } catch (e) {
-      console.error('Error cargando gastos:', e);
-    } finally {
-      if (!background) setLoading(false);
-    }
-  };
+  const { data: gastosData, loading, refetch: refetchGastos } = useFetch('/api/gastos', {
+    categoria: filtroCat !== 'Todos' ? filtroCat : undefined,
+    inicio: rangeActual.inicio.toISOString(),
+    fin:    rangeActual.fin.toISOString(),
+    limit: 100,
+  });
 
+  useEffect(() => {
+    if (gastosData) {
+      setGastos(gastosData.gastos || []);
+      setTotalesCat(gastosData.totales_por_categoria || []);
+      setTotalGeneral(gastosData.total_general || { total_usd: 0, total_bs: 0 });
+    }
+  }, [gastosData]);
   const fetchTasa = async () => {
     try {
       const { data } = await api.get('/api/exchange-rate');
@@ -123,7 +115,7 @@ export default function GastosPage() {
     fetchTasa();
   }, []);
 
-  useEffect(() => { fetchGastos(); }, [filtroCat, periodo, customInicio, customFin]);
+  // Ya no necesitamos useEffect para fetchGastos porque useFetch se actualiza al cambiar los params
 
   const guardarGasto = async (e) => {
     e.preventDefault();
@@ -149,7 +141,7 @@ export default function GastosPage() {
       setTab('historial');
       toastSuccess(editId ? 'Gasto actualizado' : 'Gasto registrado');
       // Actualización en segundo plano sin spinner para mantener la fluidez de la UI
-      fetchGastos(true);
+      refetchGastos(true);
     } catch (er) {
       toastError(er.response?.data?.error || er.message || 'Error al guardar el gasto');
     } finally {
@@ -178,7 +170,7 @@ export default function GastosPage() {
       await api.delete(`/api/gastos/${id}`);
       toastSuccess('Gasto eliminado');
       // Actualización en segundo plano sin spinner
-      fetchGastos(true);
+      refetchGastos(true);
     } catch (er) {
       toastError(er.response?.data?.error || er.message || 'Error al eliminar el gasto');
     }

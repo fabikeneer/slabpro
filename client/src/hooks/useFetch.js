@@ -14,27 +14,41 @@ const globalFetchCache = {};
 export function useFetch(url, initialParams = {}, autoFetch = true) {
   const cacheKey = url + JSON.stringify(initialParams);
   
-  // Inicializamos con caché si existe, para que no empiece "vacío" o en 0
-  const [data, setData] = useState(globalFetchCache[cacheKey] || null);
-  
-  // Si hay caché, no mostramos pantalla de carga inicial
-  const [loading, setLoading] = useState(autoFetch && !globalFetchCache[cacheKey]);
+  // TTL de 1 minuto (60000 ms)
+  const CACHE_TTL = 60000;
+
+  // Verificamos si hay caché válido (menos de 1 minuto de antigüedad)
+  const getValidCache = (key) => {
+    const cached = globalFetchCache[key];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    // Si expiró, lo borramos
+    if (cached) delete globalFetchCache[key];
+    return null;
+  };
+
+  const initialCache = getValidCache(cacheKey);
+  const [data, setData] = useState(initialCache);
+  const [loading, setLoading] = useState(autoFetch && !initialCache);
   const [error, setError] = useState(null);
 
   const execute = useCallback(async (background = false, overrideParams = null) => {
     const currentParams = overrideParams || initialParams;
     const currentKey = url + JSON.stringify(currentParams);
+    
+    const validCache = getValidCache(currentKey);
 
-    // Solo bloqueamos la pantalla (loading=true) si NO es background Y no hay caché
-    if (!background && !globalFetchCache[currentKey]) {
+    // Solo bloqueamos la pantalla (loading=true) si NO es background Y no hay caché válido
+    if (!background && !validCache) {
       setLoading(true);
     }
     setError(null);
 
     try {
       const response = await api.get(url, { params: currentParams });
-      // Guardamos la respuesta fresca en la memoria caché
-      globalFetchCache[currentKey] = response.data;
+      // Guardamos la respuesta fresca con el timestamp actual
+      globalFetchCache[currentKey] = { data: response.data, timestamp: Date.now() };
       setData(response.data);
       return response.data;
     } catch (err) {
@@ -48,8 +62,8 @@ export function useFetch(url, initialParams = {}, autoFetch = true) {
 
   useEffect(() => {
     if (autoFetch) {
-      // Si ya hay caché, lo hacemos en "background" (true) para actualizar silenciosamente
-      execute(!!globalFetchCache[cacheKey]);
+      // Si ya hay caché válido, lo hacemos en "background" (true)
+      execute(!!getValidCache(cacheKey));
     }
   }, [execute, autoFetch]);
 
@@ -57,7 +71,7 @@ export function useFetch(url, initialParams = {}, autoFetch = true) {
 
   // Exponemos una función para actualizar la caché manualmente si es necesario
   const mutateData = (newData) => {
-    globalFetchCache[cacheKey] = newData;
+    globalFetchCache[cacheKey] = { data: newData, timestamp: Date.now() };
     setData(newData);
   };
 
