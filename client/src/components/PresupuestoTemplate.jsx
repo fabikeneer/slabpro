@@ -10,12 +10,12 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
   const numero = guardado?.numero_presupuesto || form.numero_presupuesto || 'BORRADOR';
   
   // Nombres y datos por defecto o de la configuración
-  const nombreEmpresa = configEmpresa?.nombre_empresa || 'ESPACIO MULTIMEDIA';
+  const nombreEmpresa = configEmpresa?.nombre_empresa || 'NOMBRE DE EMPRESA';
   const logo = configEmpresa?.logo_data; 
-  const emailEmpresa = configEmpresa?.email || 'hola@sitioincreible.com';
-  const telefonoEmpresa = configEmpresa?.telefono || '(55) 1234-5678';
-  const direccionEmpresa = configEmpresa?.direccion || 'Dirección de la empresa';
-  const rifEmpresa = configEmpresa?.rif || 'J-12345678-9';
+  const emailEmpresa = configEmpresa?.email || 'correo@empresa.com';
+  const telefonoEmpresa = configEmpresa?.telefono || '0000-0000000';
+  const direccionEmpresa = configEmpresa?.direccion || 'Dirección no configurada';
+  const rifEmpresa = configEmpresa?.rif || 'J-00000000-0';
   
   const lineas = totales?.lineasCalculadas || form?.lineas || [];
   

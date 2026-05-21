@@ -221,7 +221,7 @@ export default function GastosPage() {
       const MARGIN = 14;
 
       // ── ENCABEZADO ────────────────────────────────────────────────────────
-      const nombreEmpresa = configEmpresa?.nombre_empresa || 'Marmolería Maracay';
+      const nombreEmpresa = configEmpresa?.nombre_empresa || 'NOMBRE DE EMPRESA';
       const logoX = MARGIN;
       const logoY = 12;
       const logoW = 38;
