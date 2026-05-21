@@ -232,6 +232,55 @@ body {
   .card { padding: 16px; }
   .stats-grid { margin-bottom: 16px; }
   .page-header { margin-bottom: 16px; }
+
+  /* ── Tablas Responsivas a Tarjetas (Cards) ── */
+  .lineas-table-wrapper {
+    overflow-x: visible !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  .list-table thead {
+    display: none; /* Ocultamos el encabezado horizontal */
+  }
+  .list-table, .list-table tbody, .list-table tr, .list-table td {
+    display: block;
+    width: 100%;
+  }
+  .list-table tr {
+    margin-bottom: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 8px 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+  .list-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right !important; /* El valor a la derecha */
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .list-table td:last-child {
+    border-bottom: none;
+    justify-content: flex-end; /* Acciones a la derecha */
+    padding-top: 14px;
+  }
+  /* Usamos el data-label de React como título a la izquierda */
+  .list-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    margin-right: 16px;
+  }
+  .list-table td span, .list-table td div {
+    text-align: right;
+  }
 }
 
 /* ── Modales ──────────────────────────────────────────────── */
