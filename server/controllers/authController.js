@@ -13,7 +13,8 @@ const authController = {
         sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000 // 24h
       });
-      res.json({ success: true, user });
+      // Token en body: Safari/iOS bloquea cookies cross-site (Vercel ↔ Render)
+      res.json({ success: true, user, token });
     } catch (error) {
       if (error.message === 'CREDENCIALES_INVALIDAS') return res.status(401).json({ success: false, message: 'Cédula o contraseña incorrectas.' });
       res.status(500).json({ success: false, message: 'Error interno.' });
