@@ -879,10 +879,17 @@ body {
   .detail-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     font-size: 14px;
     border-bottom: 1px dashed var(--border);
     padding-bottom: 8px;
+    gap: 12px;
+  }
+  .detail-item > span:last-child {
+    text-align: right;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 70%;
   }
   .detail-item:last-child {
     border-bottom: none;
