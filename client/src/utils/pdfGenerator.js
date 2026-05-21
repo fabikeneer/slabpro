@@ -33,9 +33,16 @@ export async function generarPDF(form, totales, guardado = null, configEmpresa =
       })
     );
 
-    // 3. Esperar un momento a que las fuentes/imágenes carguen y React se monte
-    setTimeout(async () => {
+    // 3. Esperar a que las fuentes web terminen de cargar antes de capturar
+    // Esto evita que html2canvas use la fuente del sistema (que se ve como negrita)
+    const captureAndGenerate = async () => {
       try {
+        // Esperar hasta 3 segundos por las fuentes
+        await Promise.race([
+          document.fonts.ready,
+          new Promise(res => setTimeout(res, 3000))
+        ]);
+
         const canvas = await html2canvas(container.firstChild, {
           scale: 4, // Escala superior para evitar texto borroso y mejor impresión
           useCORS: true,
@@ -86,6 +93,9 @@ export async function generarPDF(form, totales, guardado = null, configEmpresa =
         root.unmount();
         document.body.removeChild(container);
       }
-    }, 800); // Dar suficiente tiempo de delay (800ms) para que todo re-renderice
+    };
+
+    // Esperar 1200ms para que React monte, luego capturar con fuentes listas
+    setTimeout(captureAndGenerate, 1200);
   });
 }
