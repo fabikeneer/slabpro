@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { toastError } from '../utils/alerts';
 import api from '../utils/api';
+import { AuthContext } from '../context/AuthContext';
 
 export default function DashboardPage() {
-  const user = JSON.parse(localStorage.getItem('slabpro_user') || 'null');
+  const { user } = useContext(AuthContext);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 

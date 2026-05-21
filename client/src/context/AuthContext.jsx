@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import api from '../utils/api';
+import { clearAuthSession, getStoredUser, getToken, setAuthSession } from '../utils/authStorage';
 
 export const AuthContext = createContext();
 
@@ -8,14 +9,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sesión con el servidor (la cookie HTTP-Only viaja automáticamente)
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    const cached = getStoredUser();
+    if (cached) setUser(cached);
+
     api.get('/api/auth/settings/me')
-      .then(res => {
+      .then((res) => {
         if (res.data.success) {
           setUser(res.data.data);
+          setAuthSession(token, res.data.data);
+        } else {
+          clearAuthSession();
+          setUser(null);
         }
       })
       .catch(() => {
+        clearAuthSession();
         setUser(null);
       })
       .finally(() => {
@@ -24,12 +38,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (newToken, userData) => {
-    // El servidor ya asignó la cookie, solo actualizamos estado
+    setAuthSession(newToken, userData);
     setUser(userData);
   };
 
   const logout = () => {
     api.post('/api/auth/logout').finally(() => {
+      clearAuthSession();
       setUser(null);
       window.location.href = '/login';
     });
@@ -37,10 +52,10 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    token: 'cookie', // Por compatibilidad
+    token: getToken(),
     login,
     logout,
-    loading
+    loading,
   };
 
   return (

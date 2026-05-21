@@ -18,15 +18,13 @@ export default function AjustesEmpresa() {
     logo_data: ''
   });
 
-  const headers = { Authorization: `Bearer ${localStorage.getItem('slabpro_token')}` };
-
   useEffect(() => {
     fetchConfig();
   }, []);
 
   const fetchConfig = async () => {
     try {
-      const { data } = await api.get('/api/config', { headers });
+      const { data } = await api.get('/api/config');
       if (data.success && data.data) {
         setForm({
           nombre_empresa: data.data.nombre_empresa || '',
@@ -66,7 +64,7 @@ export default function AjustesEmpresa() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await api.put('/api/config', form, { headers });
+      const { data } = await api.put('/api/config', form);
       if (data.success) {
         toastSuccess('Configuración guardada exitosamente.');
         recargarConfig();
