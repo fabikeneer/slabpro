@@ -861,12 +861,12 @@ body {
 }
 
 .expandable-content {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
   .expandable-content.expanded {
-    display: table-row;
+    display: block !important;
   }
   .expandable-details {
     padding: 16px;

@@ -74,6 +74,7 @@ export default function GastosPage() {
   const [totalGeneral, setTotalGeneral] = useState({ total_usd: 0, total_bs: 0 });
   const [proyectos, setProyectos] = useState([]);
   const [tasa, setTasa] = useState(0);
+  const [busqueda, setBusqueda] = useState('');
 
   // Filtros
   const [filtroCat, setFiltroCat] = useState('Todos');
@@ -108,6 +109,15 @@ export default function GastosPage() {
       setTotalGeneral(gastosData.total_general || { total_usd: 0, total_bs: 0 });
     }
   }, [gastosData]);
+
+  const gastosFiltrados = gastos.filter(g => {
+    if (!busqueda) return true;
+    const term = busqueda.toLowerCase();
+    return (
+      (g.descripcion && g.descripcion.toLowerCase().includes(term)) ||
+      (g.proyecto_nombre && g.proyecto_nombre.toLowerCase().includes(term))
+    );
+  });
   const fetchTasa = async () => {
     try {
       const { data } = await api.get('/api/exchange-rate');
@@ -585,6 +595,13 @@ export default function GastosPage() {
                 {CATEGORIAS.map(c => <option key={c} value={c}>{catLabel(c)}</option>)}
               </select>
             </div>
+            <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
+              <label className="form-label">Buscar Gasto</label>
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: 10, top: 12, color: 'var(--text-muted)' }} width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" className="form-input" style={{ paddingLeft: 34 }} placeholder="Descripción o proyecto..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+              </div>
+            </div>
             <button onClick={exportarPDF} className="btn btn-primary" style={{ padding:'11px 20px' }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Exportar PDF
             </button>
@@ -617,13 +634,13 @@ export default function GastosPage() {
           <div className="card" style={{ padding:0, overflow:'hidden' }}>
             {loading ? (
               <div style={{ padding:40, textAlign:'center' }}><span className="spinner" /></div>
-            ) : gastos.length === 0 ? (
+            ) : gastosFiltrados.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 </div>
-                <h3>No hay gastos registrados</h3>
-                <p>Los gastos de nómina aparecerán aquí automáticamente, o añade uno manual.</p>
+                <h3>{busqueda ? 'No hay resultados para tu búsqueda' : 'No hay gastos registrados'}</h3>
+                <p>Los gastos aparecerán aquí automáticamente, o añade uno manual.</p>
               </div>
             ) : (
               <div className="lineas-table-wrapper" style={{ border:'none', borderRadius:0 }}>
@@ -640,7 +657,7 @@ export default function GastosPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {gastos.map(g => (
+                    {gastosFiltrados.map(g => (
                       <tr key={g.id_gasto} className="gasto-row">
                         <td data-label="Fecha" style={{ whiteSpace:'nowrap', color:'var(--text-muted)', fontSize:13 }}>{fmtDate(g.fecha_gasto)}</td>
                         <td data-label="Categoría">

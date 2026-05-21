@@ -126,13 +126,26 @@ export default function ProyectosPage() {
   const [form,         setForm]         = useState(FORM_INIT);
   const [expandedProyId, setExpandedProyId] = useState(null);
   const [expandedPresId, setExpandedPresId] = useState(null);
+  const [busquedaProy, setBusquedaProy] = useState('');
+  const [busquedaPres, setBusquedaPres] = useState('');
 
   const toggleProyExpand = (id) => setExpandedProyId(expandedProyId === id ? null : id);
   const togglePresExpand = (id) => setExpandedPresId(expandedPresId === id ? null : id);
 
 
-  const proyectosFiltrados = filtroEstatus==='Todos' ? proyectos : proyectos.filter(p=>p.estatus===filtroEstatus);
-  const presFiltrados = filtroPres==='Todos' ? presupuestos : presupuestos.filter(p=>p.estatus===filtroPres);
+  const termProy = busquedaProy.toLowerCase();
+  const proyectosFiltrados = proyectos.filter(p => {
+    if (filtroEstatus !== 'Todos' && p.estatus !== filtroEstatus) return false;
+    if (termProy) return (p.nombre_proyecto && p.nombre_proyecto.toLowerCase().includes(termProy)) || (p.nombre_cliente && p.nombre_cliente.toLowerCase().includes(termProy));
+    return true;
+  });
+
+  const termPres = busquedaPres.toLowerCase();
+  const presFiltrados = presupuestos.filter(p => {
+    if (filtroPres !== 'Todos' && p.estatus !== filtroPres) return false;
+    if (termPres) return (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(termPres)) || (p.proyecto_descripcion && p.proyecto_descripcion.toLowerCase().includes(termPres)) || (p.numero_presupuesto && p.numero_presupuesto.toLowerCase().includes(termPres));
+    return true;
+  });
 
   const stats = {
     total:      proyectos.length,
@@ -211,6 +224,10 @@ export default function ProyectosPage() {
           <div className="card-header">
             <div><div className="card-title">Lista de Proyectos</div><div className="card-subtitle">{proyectosFiltrados.length} registros</div></div>
             <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+              <div style={{ position: 'relative', marginRight: '8px' }}>
+                <svg style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" className="form-input" style={{ paddingLeft: 30, minHeight: 34, padding: '6px 10px 6px 30px', fontSize: 13, width: 200 }} placeholder="Buscar proyecto..." value={busquedaProy} onChange={e => setBusquedaProy(e.target.value)} />
+              </div>
               {['Todos',...ESTATUS_LIST].map(s=><button key={s} className={`fpill${filtroEstatus===s?' act':''}`} onClick={()=>setFiltroEstatus(s)}>{s}</button>)}
               <button className="btn btn-ghost btn-sm" onClick={()=>refetchProy(false)} disabled={loadingProy}>{loadingProy?<span className="spinner"/>:'Actualizar'}</button>
             </div>
@@ -224,7 +241,7 @@ export default function ProyectosPage() {
           </div>}
 
           {loadingProy?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
-          :proyectosFiltrados.length===0?<div className="empty-state"><h3>Sin proyectos {filtroEstatus!=='Todos'?`en "${filtroEstatus}"`:''}</h3><p>Crea uno con el botón de arriba o aprueba un presupuesto.</p></div>
+          :proyectosFiltrados.length===0?<div className="empty-state"><h3>{busquedaProy ? 'No hay resultados' : `Sin proyectos ${filtroEstatus!=='Todos'?`en "${filtroEstatus}"`:''}`}</h3><p>Crea uno con el botón de arriba o aprueba un presupuesto.</p></div>
           :<div style={{overflowX:'auto'}}><table className="list-table">
             <thead><tr><th style={{width:36}}></th><th>Proyecto / Cliente</th><th className="hide-on-mobile">RIF/Cédula</th><th className="hide-on-mobile">Descripción</th><th>Estatus</th><th>Monto USD</th><th className="hide-on-mobile">Inicio</th><th className="hide-on-mobile" style={{textAlign:'right'}}>Acciones</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>
@@ -232,7 +249,7 @@ export default function ProyectosPage() {
                 <React.Fragment key={p.id_proyecto}>
                   <tr className={`prow table-row-clickable ${selectedId===p.id_proyecto?' sel':''}`} onClick={()=>{ setSelectedId(selectedId===p.id_proyecto?null:p.id_proyecto); toggleProyExpand(p.id_proyecto); }}>
                     <td data-label="Selección"><div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${selectedId===p.id_proyecto?'var(--accent-blue)':'var(--border)'}`,background:selectedId===p.id_proyecto?'var(--accent-blue)':'transparent',transition:'all .15s'}}/></td>
-                    <td data-label="Proyecto/Cliente"><div style={{fontWeight:700,color:'var(--text-primary)'}}>{p.nombre_proyecto || p.nombre_cliente}</div><div style={{fontSize:12,color:'var(--text-secondary)'}}>{p.nombre_cliente} <span style={{fontSize:11,color:'var(--text-muted)'}}>#{p.id_proyecto}</span></div></td>
+                    <td data-label="Proyecto/Cliente"><div style={{fontWeight:700,color:'var(--text-primary)'}}>{p.nombre_proyecto || p.nombre_cliente} <span style={{fontSize:11,color:'var(--text-muted)',fontWeight:'normal'}}>#{p.id_proyecto}</span></div></td>
                     <td className="hide-on-mobile" data-label="RIF/Cédula" style={{fontSize:13,color:'var(--text-secondary)',fontFamily:'monospace'}}>{p.rif_cedula||'—'}</td>
                     <td className="hide-on-mobile" data-label="Descripción" style={{maxWidth:220}}><div style={{fontSize:13,color:'var(--text-secondary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.descripcion_obra||<span style={{color:'var(--text-muted)'}}>Sin descripción</span>}</div></td>
                     <td data-label="Estatus" onClick={e=>e.stopPropagation()}>
@@ -311,6 +328,10 @@ export default function ProyectosPage() {
           <div className="card-header">
             <div><div className="card-title">Historial de Presupuestos</div><div className="card-subtitle">{presFiltrados.length} registros</div></div>
             <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+              <div style={{ position: 'relative', marginRight: '8px' }}>
+                <svg style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" className="form-input" style={{ paddingLeft: 30, minHeight: 34, padding: '6px 10px 6px 30px', fontSize: 13, width: 200 }} placeholder="Buscar presupuesto..." value={busquedaPres} onChange={e => setBusquedaPres(e.target.value)} />
+              </div>
               {['Todos','borrador','aprobado','vencido'].map(s=>(
                 <button key={s} className={`fpill${filtroPres===s?' act':''}`} onClick={()=>setFiltroPres(s)}>{s==='Todos'?'Todos':PRES_LABEL[s]||s}</button>
               ))}
@@ -319,7 +340,7 @@ export default function ProyectosPage() {
           </div>
 
           {loadingPres?<div style={{textAlign:'center',padding:48}}><span className="spinner" style={{width:36,height:36,borderWidth:3}}/></div>
-          :presFiltrados.length===0?<div className="empty-state"><h3>Sin presupuestos {filtroPres!=='Todos'?`con estatus "${filtroPres}"`:''}</h3></div>
+          :presFiltrados.length===0?<div className="empty-state"><h3>{busquedaPres ? 'No hay resultados' : `Sin presupuestos ${filtroPres!=='Todos'?`con estatus "${filtroPres}"`:''}`}</h3></div>
           :<div style={{overflowX:'auto'}}><table className="list-table">
             <thead><tr><th>N° Presupuesto</th><th>Cliente</th><th className="hide-on-mobile">Descripción</th><th>Total USD</th><th className="hide-on-mobile">Tasa</th><th>Estatus</th><th className="hide-on-mobile">Fecha</th><th className="show-on-mobile" style={{ width: 40 }}></th></tr></thead>
             <tbody>

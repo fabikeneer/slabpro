@@ -230,14 +230,14 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                       disabled={linea.tipo === 'flete' || linea.tipo === 'otro'}
                       style={{ 
                         paddingRight: (linea.tipo !== 'flete' && linea.tipo !== 'otro') ? '26px' : '8px',
-                        borderColor: (linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') ? 'var(--accent-gold)' : undefined
+                        borderColor: (linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'var(--accent-gold)' : undefined
                       }}
-                      title={(linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
+                      title={(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
                     />
-                    {(linea.tipo === 'drywall' || linea.tipo === 'carpinteria' || linea.tipo === 'porcelanato') && (
+                    {(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') && (
                       <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700 }}>m²</span>
                     )}
-                    {(linea.tipo === 'piedra' || linea.tipo === 'instalacion') && (
+                    {(linea.tipo === 'piedra' || linea.tipo === 'instalacion' || linea.tipo === 'carpinteria') && (
                       <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>ml</span>
                     )}
                   </div>

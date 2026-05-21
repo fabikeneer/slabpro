@@ -98,7 +98,7 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
                 <td style={{...styles.td, textAlign: 'right'}}>{fmtUSD(l.precio_unitario_usd)}</td>
                 <td style={{...styles.td, textAlign: 'center'}}>
                   {l.metros_lineales > 0 
-                    ? `${Number(l.metros_lineales).toFixed(2)} ${['drywall', 'carpinteria', 'porcelanato'].includes(l.tipo) ? 'm²' : 'ml'}` 
+                    ? `${Number(l.metros_lineales).toFixed(2)} ${['drywall', 'porcelanato'].includes(l.tipo) ? 'm²' : 'ml'}` 
                     : l.cantidad}
                 </td>
                 <td style={{...styles.td, textAlign: 'right'}}>{fmtUSD(l.subtotalUSD || (l.precio_unitario_usd * (l.metros_lineales || l.cantidad)))}</td>
