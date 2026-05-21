@@ -15,6 +15,7 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
   const emailEmpresa = configEmpresa?.email || 'hola@sitioincreible.com';
   const telefonoEmpresa = configEmpresa?.telefono || '(55) 1234-5678';
   const direccionEmpresa = configEmpresa?.direccion || 'Dirección de la empresa';
+  const rifEmpresa = configEmpresa?.rif || 'J-12345678-9';
   
   const lineas = totales?.lineasCalculadas || form?.lineas || [];
   
@@ -32,13 +33,13 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
         {/* Header */}
         <header className="header-row" style={styles.headerRow}>
           <div className="brand-block" style={styles.brandBlock}>
-            {logo ? (
+            {logo && (
               <img src={logo} alt="Logo" style={{ ...styles.brandIcon, objectFit: 'contain', background: 'transparent', border: 'none', borderRadius: 0 }} />
-            ) : (
-              <div className="brand-icon" style={styles.brandIcon}>!</div>
             )}
             <div className="brand-text" style={styles.brandText}>
-              <strong style={styles.brandTextStrong}>{nombreEmpresa.toUpperCase()}</strong>
+              <strong style={styles.brandTextStrong}>{nombreEmpresa}</strong>
+              <span style={styles.brandTextSpan}>RIF: {rifEmpresa}</span>
+              <span style={styles.brandTextSpan}>{telefonoEmpresa}</span>
             </div>
           </div>
           <div className="doc-title-block" style={styles.docTitleBlock}>
@@ -205,12 +206,12 @@ const styles = {
   },
   brandBlock: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '0rem',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: '1.2rem',
     background: 'transparent',
     color: vars.ink,
-    padding: '0.65rem 0',
+    padding: '0',
     minWidth: '0'
   },
   brandIcon: {
@@ -230,17 +231,17 @@ const styles = {
   brandTextStrong: {
     display: 'block',
     fontSize: '1.15rem',
-    letterSpacing: '0.04em',
+    letterSpacing: '0.01em',
     fontWeight: '800',
-    marginTop: '-8px'
+    marginTop: '0'
   },
   brandTextSpan: {
     display: 'block',
-    fontSize: '0.68rem',
+    fontSize: '0.8rem',
     fontWeight: '400',
-    opacity: '0.92',
-    marginTop: '0.15rem',
-    letterSpacing: '0.02em'
+    color: vars.inkSoft,
+    marginTop: '0.2rem',
+    letterSpacing: '0.01em'
   },
   docTitleBlock: {
     textAlign: 'right',
@@ -248,7 +249,7 @@ const styles = {
   },
   h1: {
     margin: '0',
-    fontSize: '2.35rem',
+    fontSize: '1.6rem',
     fontWeight: '700',
     letterSpacing: '0.02em',
     color: vars.ink,
@@ -275,8 +276,8 @@ const styles = {
     alignItems: 'flex-start'
   },
   clientName: {
-    fontSize: '1.35rem',
-    fontWeight: '700',
+    fontSize: '1.25rem',
+    fontWeight: '400',
     margin: '0 0 0.25rem',
     color: vars.ink
   },
