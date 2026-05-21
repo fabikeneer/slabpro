@@ -27,7 +27,9 @@ export default function NominaPage() {
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate]   = useState(new Date());
     const [idEmpleado, setIdEmpleado] = useState('');
-    const [reporte, setReporte]   = useState(null);
+    const [busqEmpleado, setBusqEmpleado] = useState('');
+    const [showDropEmp, setShowDropEmp] = useState(false);
+    const [reporte, setReporte] = useState(null);
     const [loading, setLoading]   = useState(false);
     
     // Estados Compartidos (SRP aplicados a través del custom hook)
@@ -343,18 +345,39 @@ export default function NominaPage() {
                 <>
                     {/* Buscador / Filtros Reporte */}
                     <div className="card" style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                        <div className="form-group" style={{ flex: '1 1 200px' }}>
+                        <div className="form-group" style={{ flex: '1 1 200px', position: 'relative' }}>
                             <label className="form-label">Trabajador (Reporte):</label>
-                            <select 
-                                className="form-select"
-                                value={idEmpleado}
-                                onChange={(e) => setIdEmpleado(e.target.value)}
-                            >
-                                <option value="">Todos los Empleados</option>
-                                {empleados.map(emp => (
-                                    <option key={emp.id} value={emp.id}>{emp.nombre}</option>
-                                ))}
-                            </select>
+                            <div style={{ position: 'relative' }}>
+                                <svg style={{ position: 'absolute', left: 10, top: 12, color: 'var(--text-muted)', pointerEvents: 'none' }} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    style={{ paddingLeft: 32 }}
+                                    placeholder={idEmpleado ? (empleados.find(e => String(e.id) === String(idEmpleado))?.nombre || 'Todos los Empleados') : 'Todos los Empleados'}
+                                    value={busqEmpleado}
+                                    onChange={e => { setBusqEmpleado(e.target.value); setShowDropEmp(true); }}
+                                    onFocus={() => setShowDropEmp(true)}
+                                    onBlur={() => setTimeout(() => setShowDropEmp(false), 200)}
+                                />
+                            </div>
+                            {showDropEmp && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', zIndex: 100, maxHeight: 220, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                                    <div
+                                        style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, color: idEmpleado === '' ? 'var(--primary)' : 'var(--text-primary)', background: idEmpleado === '' ? 'rgba(254,183,44,0.1)' : 'transparent' }}
+                                        onMouseDown={() => { setIdEmpleado(''); setBusqEmpleado(''); setShowDropEmp(false); }}
+                                    >Todos los Empleados</div>
+                                    {empleados
+                                        .filter(emp => !busqEmpleado || emp.nombre.toLowerCase().includes(busqEmpleado.toLowerCase()))
+                                        .map(emp => (
+                                            <div
+                                                key={emp.id}
+                                                style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, color: String(idEmpleado) === String(emp.id) ? 'var(--primary)' : 'var(--text-primary)', background: String(idEmpleado) === String(emp.id) ? 'rgba(254,183,44,0.1)' : 'transparent' }}
+                                                onMouseDown={() => { setIdEmpleado(emp.id); setBusqEmpleado(emp.nombre); setShowDropEmp(false); }}
+                                            >{emp.nombre}</div>
+                                        ))
+                                    }
+                                </div>
+                            )}
                         </div>
                         <div className="form-group" style={{ flex: '1 1 140px' }}>
                             <label className="form-label">Desde:</label>

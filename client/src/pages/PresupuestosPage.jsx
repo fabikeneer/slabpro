@@ -34,8 +34,9 @@ export default function PresupuestosPage() {
   
   const { configData: configEmpresa } = useConfiguracion();
 
-  const [loadingAccion, setLoadingAccion] = useState(null); // id del presupuesto en acción
-  const [expandedId, setExpandedId] = useState(null); // ID del presupuesto expandido en móvil
+  const [loadingAccion, setLoadingAccion] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
 
   const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
 
@@ -128,6 +129,15 @@ export default function PresupuestosPage() {
     pendientes: presupuestos.filter(p => ['borrador','enviado'].includes(p.estatus)).length,
   };
 
+  const termBusq = busqueda.toLowerCase();
+  const presFiltrados = busqueda
+    ? presupuestos.filter(p =>
+        (p.numero_presupuesto && p.numero_presupuesto.toLowerCase().includes(termBusq)) ||
+        (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(termBusq)) ||
+        (p.proyecto_descripcion && p.proyecto_descripcion.toLowerCase().includes(termBusq))
+      )
+    : presupuestos;
+
   return (
     <div>
 
@@ -184,24 +194,37 @@ export default function PresupuestosPage() {
         <div className="card-header">
           <div>
             <div className="card-title">Historial de Presupuestos</div>
-            <div className="card-subtitle">{presupuestos.length} registros encontrados</div>
+            <div className="card-subtitle">{presFiltrados.length} registros encontrados</div>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => refetch(false)} disabled={loadingLista}>
-            {loadingLista ? <span className="spinner" /> : '↺'} Actualizar
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <svg style={{ position: 'absolute', left: 10, top: 11, color: 'var(--text-muted)' }} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input
+                type="text"
+                className="form-input"
+                style={{ paddingLeft: 32, fontSize: 13, padding: '7px 10px 7px 32px', width: 220 }}
+                placeholder="Buscar por cliente, N° o proyecto..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+              />
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => refetch(false)} disabled={loadingLista}>
+              {loadingLista ? <span className="spinner" /> : '↺'} Actualizar
+            </button>
+          </div>
         </div>
 
         {loadingLista ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <span className="spinner" style={{ width: 32, height: 32 }} />
           </div>
-        ) : presupuestos.length === 0 ? (
+        ) : presFiltrados.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--text-muted)' }}>
               <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
             </div>
-            <h3>Sin presupuestos aún</h3>
-            <p>Crea tu primer presupuesto con el botón de arriba.</p>
+            <h3>{busqueda ? 'No hay resultados para tu búsqueda' : 'Sin presupuestos aún'}</h3>
+            <p>{busqueda ? 'Intenta con otro término.' : 'Crea tu primer presupuesto con el botón de arriba.'}</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -220,7 +243,7 @@ export default function PresupuestosPage() {
                 </tr>
               </thead>
               <tbody>
-                {presupuestos.map(p => (
+                {presFiltrados.map(p => (
                   <React.Fragment key={p.id}>
                     <tr className="table-row-clickable" onClick={() => toggleExpand(p.id)}>
                       <td data-label="N° Presupuesto">
