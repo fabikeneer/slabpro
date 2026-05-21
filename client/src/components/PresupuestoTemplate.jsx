@@ -52,7 +52,7 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
         <section className="client-dates" style={styles.clientDates}>
           <div>
             <div className="label-gold" style={styles.labelGold}>Cliente</div>
-            <h2 className="client-name" style={styles.clientName}>{form?.cliente_nombre || 'Cliente Anónimo'}</h2>
+            <div className="client-name" style={styles.clientName}>{form?.cliente_nombre || 'Cliente Anónimo'}</div>
             <p className="client-role" style={styles.clientRole}>{form?.cliente_rif || 'Sin RIF'}</p>
           </div>
           <div className="dates-col" style={styles.datesCol}>
