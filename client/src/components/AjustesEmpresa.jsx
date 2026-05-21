@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toastSuccess, toastError } from '../utils/alerts';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 
 export default function AjustesEmpresa() {
+  const { recargarConfig } = useConfiguracion();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -67,6 +69,7 @@ export default function AjustesEmpresa() {
       const { data } = await api.put('/api/config', form, { headers });
       if (data.success) {
         toastSuccess('Configuración guardada exitosamente.');
+        recargarConfig();
       }
     } catch (err) {
       console.error('Error saving config:', err);

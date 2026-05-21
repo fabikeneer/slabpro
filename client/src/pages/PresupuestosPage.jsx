@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 import BudgetForm from '../components/BudgetForm';
 import { generarPDF } from '../utils/pdfGenerator';
 
@@ -31,8 +32,7 @@ export default function PresupuestosPage() {
   const { data: presData, loading: loadingLista, refetch } = useFetch('/api/presupuestos', {}, false);
   const presupuestos = presData?.data || [];
   
-  const { data: configData } = useFetch('/api/config');
-  const configEmpresa = configData?.data || null;
+  const { configData: configEmpresa } = useConfiguracion();
 
   const [loadingAccion, setLoadingAccion] = useState(null); // id del presupuesto en acción
   const [expandedId, setExpandedId] = useState(null); // ID del presupuesto expandido en móvil

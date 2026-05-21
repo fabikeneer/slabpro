@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useBudget, TIPOS_LINEA, TIPOS_PIEDRA } from '../hooks/useBudget';
 import { useFetch } from '../hooks/useFetch';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 import { generarPDF } from '../utils/pdfGenerator';
 import api from '../utils/api';
 
@@ -18,8 +19,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
     resetForm, loading, guardado,
   } = useBudget();
 
-  const { data: configData } = useFetch('/api/config');
-  const configEmpresa = configData?.data || null;
+  const { configData: configEmpresa } = useConfiguracion();
 
   useEffect(() => {
     if (presupuestoEdit) {

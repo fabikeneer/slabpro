@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 import { useFetch } from '../hooks/useFetch';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 
 registerLocale('es', es);
 
@@ -60,8 +61,7 @@ function getRange(periodo) {
 }
 
 export default function GastosPage() {
-  const { data: configData } = useFetch('/api/config');
-  const configEmpresa = configData?.data || null;
+  const { configData: configEmpresa } = useConfiguracion();
 
   const [tab, setTab] = useState('historial');
   const [gastos, setGastos] = useState([]);

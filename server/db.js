@@ -32,6 +32,8 @@ const pool = mysql.createPool({
   connectionLimit:    10,
   queueLimit:         0,
   connectTimeout:     30000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
   ...(useSsl && {
     ssl: {
       minVersion: 'TLSv1.2',

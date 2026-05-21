@@ -133,3 +133,30 @@ app.listen(PORT, '0.0.0.0', () => {
 
   exchangeRateService.startPolling();
 });
+
+// ── Cierre Elegante (Graceful Shutdown) ──────────────────────────────────────
+const dbPool = require('./db');
+const redisClient = require('./redis');
+
+async function gracefulShutdown(signal) {
+  console.log(`\n[INFO] Recibida señal ${signal}. Cerrando recursos elegantemente...`);
+  try {
+    if (dbPool) {
+      await dbPool.end();
+      console.log('[OK] Pool de conexiones a MySQL/TiDB cerrado.');
+    }
+    
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.quit();
+      console.log('[OK] Conexión a Redis cerrada.');
+    }
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('[ERROR] Fallo durante el cierre:', error);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

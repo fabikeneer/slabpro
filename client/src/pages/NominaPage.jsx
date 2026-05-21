@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale/es';
 import "react-datepicker/dist/react-datepicker.css";
 import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 import {
     exportarReportePDFProfesional,
     descargarComprobanteProfesional,
@@ -32,8 +33,7 @@ export default function NominaPage() {
     // Estados Compartidos (SRP aplicados a través del custom hook)
     const { data: empData, refetch: refetchEmp } = useFetch('/api/nomina/empleados');
     const { data: proyData } = useFetch('/api/nomina/proyectos');
-    const { data: configData } = useFetch('/api/config');
-    const configEmpresa = configData?.data || null;
+    const { configData: configEmpresa } = useConfiguracion();
     
     const empleados = empData?.data || [];
     const proyectos = proyData || [];

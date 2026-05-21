@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import { useFetch } from '../hooks/useFetch';
+import { useConfiguracion } from '../hooks/useConfiguracion';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
@@ -110,11 +111,10 @@ export default function ProyectosPage() {
   // Custom Hook para peticiones en segundo plano (SRP)
   const { data: proyData, loading: loadingProy, refetch: refetchProy } = useFetch('/api/proyectos');
   const { data: presData, loading: loadingPres, refetch: refetchPres } = useFetch('/api/presupuestos');
-  const { data: configData } = useFetch('/api/config');
+  const { configData: configEmpresa } = useConfiguracion();
   
   const proyectos = proyData?.data || [];
   const presupuestos = presData?.data || [];
-  const configEmpresa = configData?.data || null;
 
   const [loadingForm,  setLoadingForm]  = useState(false);
   const [loadingPDF,   setLoadingPDF]   = useState(null);
