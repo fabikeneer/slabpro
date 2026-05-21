@@ -123,7 +123,7 @@ const authService = {
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
       });
       try {
-        await transporter.sendMail({
+        transporter.sendMail({
           from: `"SlabPro System" <${process.env.SMTP_USER}>`,
           to: realEmail,
           subject: 'Código de Recuperación de SlabPro',
@@ -143,8 +143,13 @@ const authService = {
               <p style="font-size: 12px; color: #999; text-align: center;">Si no solicitaste este código, ignora este correo.</p>
             </div>
           `
+        }).then(() => {
+          console.log(`[MAIL] Código enviado a ${realEmail}`);
+        }).catch(err => {
+          console.error('Error enviando correo SMTP:', err);
         });
-        console.log(`[MAIL] Código enviado a ${realEmail}`);
+        
+        console.log(`[MAIL_QUEUE] Procesando envío a ${realEmail} en segundo plano...`);
       } catch (err) {
         console.error('Error enviando correo SMTP:', err);
         console.log(`[SIMULACIÓN] Código para ${realEmail}: ${code}`);
