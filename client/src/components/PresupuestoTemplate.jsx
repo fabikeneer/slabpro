@@ -94,14 +94,38 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
             {lineas.length > 0 ? lineas.map((l, idx) => (
               <tr key={idx} style={idx % 2 === 1 ? styles.trAlt : styles.tr}>
                 <td style={{...styles.td, textAlign: 'center'}}>{idx + 1}</td>
-                <td style={styles.td}>{l.descripcion || l.tipo || '—'}</td>
-                <td style={{...styles.td, textAlign: 'right'}}>{fmtUSD(l.precio_unitario_usd)}</td>
-                <td style={{...styles.td, textAlign: 'center'}}>
-                  {l.metros_lineales > 0 
-                    ? `${Number(l.metros_lineales).toFixed(2)} ${['drywall', 'porcelanato'].includes(l.tipo) ? 'm²' : 'ml'}` 
-                    : l.cantidad}
+                <td style={styles.td}>
+                  {l.tipo === 'proyecto_completo' ? (() => {
+                    try {
+                      const p = JSON.parse(l.descripcion || '{}');
+                      const comps = (p.componentes || []).map(c => {
+                        const MAP = { carpinteria: 'Carpintería', drywall: 'Drywall', piedra: 'Piedra / Cuarzo', porcelanato: 'Porcelanato', instalacion: 'Instalación', flete: 'Flete', otro: 'Otros' };
+                        return MAP[c] || c;
+                      });
+                      return (
+                        <div>
+                          <div style={{ fontWeight: 600, marginBottom: 2 }}>Proyecto Completo</div>
+                          {p.texto && <div style={{ fontSize: '0.75rem', color: vars.inkSoft, marginBottom: 3 }}>{p.texto}</div>}
+                          {comps.length > 0 && (
+                            <div style={{ fontSize: '0.72rem', color: vars.inkSoft }}>
+                              <span style={{ fontWeight: 600 }}>Incluye: </span>{comps.join(' • ')}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } catch { return <span>Proyecto Completo</span>; }
+                  })() : (l.descripcion || l.tipo || '—')}
                 </td>
-                <td style={{...styles.td, textAlign: 'right'}}>{fmtUSD(l.subtotalUSD || (l.precio_unitario_usd * (l.metros_lineales || l.cantidad)))}</td>
+                <td style={{...styles.td, textAlign: 'right'}}>{l.tipo === 'proyecto_completo' ? '—' : fmtUSD(l.precio_unitario_usd)}</td>
+                <td style={{...styles.td, textAlign: 'center'}}>
+                  {l.tipo === 'proyecto_completo'
+                    ? <span style={{ fontSize: '0.7rem', color: vars.inkSoft }}>Precio único</span>
+                    : l.metros_lineales > 0 
+                      ? `${Number(l.metros_lineales).toFixed(2)} ${['drywall', 'porcelanato'].includes(l.tipo) ? 'm²' : 'ml'}` 
+                      : l.cantidad
+                  }
+                </td>
+                <td style={{...styles.td, textAlign: 'right', fontWeight: 600}}>{fmtUSD(l.subtotalUSD || (l.precio_unitario_usd * (l.metros_lineales || l.cantidad || 1)))}</td>
               </tr>
             )) : (
               <tr>

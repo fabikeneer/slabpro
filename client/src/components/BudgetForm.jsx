@@ -37,8 +37,17 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
         observaciones: presupuestoEdit.observaciones || '',
         validez_dias: presupuestoEdit.validez_dias || 15,
         lineas: (presupuestoEdit.lineas || []).length > 0 
-          ? presupuestoEdit.lineas.map(l => ({ ...l, _id: crypto.randomUUID() }))
-          : [{ _id: crypto.randomUUID(), tipo: 'piedra', descripcion: '', metros_lineales: '', precio_unitario_usd: '', cantidad: 1, orden: 0 }]
+          ? presupuestoEdit.lineas.map(l => {
+              // Si es proyecto_completo, deserializar descripcion JSON
+              if (l.tipo === 'proyecto_completo') {
+                try {
+                  const parsed = JSON.parse(l.descripcion || '{}');
+                  return { ...l, _id: crypto.randomUUID(), descripcion: parsed.texto || '', componentes: parsed.componentes || [] };
+                } catch { return { ...l, _id: crypto.randomUUID(), componentes: [] }; }
+              }
+              return { ...l, _id: crypto.randomUUID(), componentes: [] };
+            })
+          : [{ _id: crypto.randomUUID(), tipo: 'piedra', descripcion: '', metros_lineales: '', precio_unitario_usd: '', cantidad: 1, componentes: [], orden: 0 }]
       });
     }
   }, [presupuestoEdit, setForm]);
@@ -175,8 +184,24 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
             </tr>
           </thead>
           <tbody>
-            {totales.lineasCalculadas.map((linea) => (
-              <tr key={linea._id}>
+            {totales.lineasCalculadas.map((linea) => {
+              const esProyComp = linea.tipo === 'proyecto_completo';
+              const COMP_OPTS = [
+                { value: 'carpinteria', label: 'Carpintería' },
+                { value: 'drywall',     label: 'Drywall' },
+                { value: 'piedra',      label: 'Piedra / Cuarzo' },
+                { value: 'porcelanato', label: 'Porcelanato' },
+                { value: 'instalacion', label: 'Instalación' },
+                { value: 'flete',       label: 'Flete / Traslado' },
+                { value: 'otro',        label: 'Otros' },
+              ];
+              const toggleComp = (val) => {
+                const curr = linea.componentes || [];
+                const next = curr.includes(val) ? curr.filter(c => c !== val) : [...curr, val];
+                setLineaField(linea._id, 'componentes', next);
+              };
+              return (
+              <tr key={linea._id} style={esProyComp ? { background: 'rgba(254,183,44,0.04)', verticalAlign: 'top' } : {}}>
                 {/* Tipo */}
                 <td data-label="Tipo">
                   <select
@@ -190,9 +215,32 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                   </select>
                 </td>
 
-                {/* Descripción: si es piedra muestra dropdown, si no texto libre */}
-                <td data-label="Descripción">
-                  {linea.tipo === 'piedra' ? (
+                {/* Descripción */}
+                <td data-label="Descripción" colSpan={esProyComp ? 3 : 1}>
+                  {esProyComp ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        className="input-sm"
+                        placeholder="Descripción del proyecto completo..."
+                        value={linea.descripcion}
+                        onChange={e => setLineaField(linea._id, 'descripcion', e.target.value)}
+                      />
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Incluye:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                        {COMP_OPTS.map(opt => (
+                          <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', color: (linea.componentes||[]).includes(opt.value) ? 'var(--accent-gold)' : 'var(--text-secondary)', fontWeight: (linea.componentes||[]).includes(opt.value) ? 600 : 400 }}>
+                            <input
+                              type="checkbox"
+                              checked={(linea.componentes||[]).includes(opt.value)}
+                              onChange={() => toggleComp(opt.value)}
+                              style={{ accentColor: 'var(--accent-gold)', width: 13, height: 13 }}
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : linea.tipo === 'piedra' ? (
                     <select
                       id={`desc-${linea._id}`}
                       className="select-sm"
@@ -216,58 +264,64 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                   )}
                 </td>
 
-                {/* Medida */}
-                <td data-label="Medida">
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      className="input-sm"
-                      placeholder={linea.tipo === 'flete' || linea.tipo === 'otro' ? 'N/A' : '0.00'}
-                      min="0"
-                      step="0.01"
-                      value={linea.metros_lineales}
-                      onChange={e => setLineaField(linea._id, 'metros_lineales', e.target.value)}
-                      disabled={linea.tipo === 'flete' || linea.tipo === 'otro'}
-                      style={{ 
-                        paddingRight: (linea.tipo !== 'flete' && linea.tipo !== 'otro') ? '26px' : '8px',
-                        borderColor: (linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'var(--accent-gold)' : undefined
-                      }}
-                      title={(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
-                    />
-                    {(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') && (
-                      <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700 }}>m²</span>
-                    )}
-                    {(linea.tipo === 'piedra' || linea.tipo === 'instalacion' || linea.tipo === 'carpinteria') && (
-                      <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>ml</span>
-                    )}
-                  </div>
-                </td>
+                {/* Medida — oculta en proyecto_completo */}
+                {!esProyComp && (
+                  <td data-label="Medida">
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        className="input-sm"
+                        placeholder={linea.tipo === 'flete' || linea.tipo === 'otro' ? 'N/A' : '0.00'}
+                        min="0"
+                        step="0.01"
+                        value={linea.metros_lineales}
+                        onChange={e => setLineaField(linea._id, 'metros_lineales', e.target.value)}
+                        disabled={linea.tipo === 'flete' || linea.tipo === 'otro'}
+                        style={{ 
+                          paddingRight: (linea.tipo !== 'flete' && linea.tipo !== 'otro') ? '26px' : '8px',
+                          borderColor: (linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'var(--accent-gold)' : undefined
+                        }}
+                        title={(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') ? 'Metros Cuadrados (m²)' : 'Metros Lineales (ml)'}
+                      />
+                      {(linea.tipo === 'drywall' || linea.tipo === 'porcelanato') && (
+                        <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--accent-gold)', fontWeight: 700 }}>m²</span>
+                      )}
+                      {(linea.tipo === 'piedra' || linea.tipo === 'instalacion' || linea.tipo === 'carpinteria') && (
+                        <span style={{ position: 'absolute', right: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>ml</span>
+                      )}
+                    </div>
+                  </td>
+                )}
 
                 {/* Precio USD */}
-                <td data-label="Precio USD">
+                <td data-label={esProyComp ? 'Monto Total USD' : 'Precio USD'}>
                   <input
                     type="number"
                     className="input-sm"
-                    placeholder="$0.00"
+                    placeholder={esProyComp ? 'Monto total...' : '$0.00'}
                     min="0"
                     step="0.01"
                     value={linea.precio_unitario_usd}
                     onChange={e => setLineaField(linea._id, 'precio_unitario_usd', e.target.value)}
+                    style={esProyComp ? { borderColor: 'var(--accent-gold)' } : {}}
                   />
+                  {esProyComp && <div style={{ fontSize: 10, color: 'var(--accent-gold)', marginTop: 2 }}>Monto único total</div>}
                 </td>
 
-                {/* Cantidad */}
-                <td data-label="Cantidad">
-                  <input
-                    type="number"
-                    className="input-sm"
-                    placeholder="1"
-                    min="1"
-                    step="1"
-                    value={linea.cantidad}
-                    onChange={e => setLineaField(linea._id, 'cantidad', e.target.value)}
-                  />
-                </td>
+                {/* Cantidad — oculta en proyecto_completo */}
+                {!esProyComp && (
+                  <td data-label="Cantidad">
+                    <input
+                      type="number"
+                      className="input-sm"
+                      placeholder="1"
+                      min="1"
+                      step="1"
+                      value={linea.cantidad}
+                      onChange={e => setLineaField(linea._id, 'cantidad', e.target.value)}
+                    />
+                  </td>
+                )}
 
                 {/* Subtotal USD */}
                 <td data-label="Subtotal USD" className="subtotal-cell">{fmtUSD(linea.subtotalUSD)}</td>
@@ -289,7 +343,8 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

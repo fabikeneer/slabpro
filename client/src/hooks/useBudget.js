@@ -5,13 +5,14 @@ import { toastSuccess, toastError } from '../utils/alerts';
 
 // ── Tipos de campo disponibles ────────────────────────────────────────────
 export const TIPOS_LINEA = [
-  { value: 'piedra',      label: 'Tipo de Piedra'   },
-  { value: 'porcelanato', label: 'Porcelanato'       },
-  { value: 'carpinteria', label: 'Carpintería'       },
-  { value: 'flete',       label: 'Flete'             },
-  { value: 'drywall',     label: 'Drywall'           },
-  { value: 'instalacion', label: 'Instalación'       },
-  { value: 'otro',        label: 'Otro'              },
+  { value: 'piedra',            label: 'Tipo de Piedra'     },
+  { value: 'porcelanato',       label: 'Porcelanato'         },
+  { value: 'carpinteria',       label: 'Carpintería'         },
+  { value: 'flete',             label: 'Flete'               },
+  { value: 'drywall',           label: 'Drywall'             },
+  { value: 'instalacion',       label: 'Instalación'         },
+  { value: 'otro',              label: 'Otro'                },
+  { value: 'proyecto_completo', label: 'Proyecto Completo'   },
 ];
 
 export const TIPOS_PIEDRA = [
@@ -20,12 +21,13 @@ export const TIPOS_PIEDRA = [
 
 // ── Línea vacía por defecto ───────────────────────────────────────────────
 const crearLineaVacia = (orden = 0, tipo = 'piedra', id = null) => ({
-  _id:                 id || crypto.randomUUID(),  // ID local temporal
+  _id:                 id || crypto.randomUUID(),
   tipo:                tipo,
   descripcion:         '',
   metros_lineales:     '',
   precio_unitario_usd: '',
   cantidad:            1,
+  componentes:         [], // para proyecto_completo
   orden,
 });
 
@@ -160,10 +162,12 @@ export function useBudget() {
         // Líneas (limpiar IDs temporales)
         lineas: form.lineas.map((l, idx) => ({
           tipo:                l.tipo,
-          descripcion:         l.descripcion,
-          metros_lineales:     parseFloat(l.metros_lineales) || 0,
+          descripcion:         l.tipo === 'proyecto_completo'
+            ? JSON.stringify({ texto: l.descripcion, componentes: l.componentes || [] })
+            : l.descripcion,
+          metros_lineales:     l.tipo === 'proyecto_completo' ? 0 : (parseFloat(l.metros_lineales) || 0),
           precio_unitario_usd: parseFloat(l.precio_unitario_usd) || 0,
-          cantidad:            parseFloat(l.cantidad) || 1,
+          cantidad:            l.tipo === 'proyecto_completo' ? 1 : (parseFloat(l.cantidad) || 1),
           orden:               idx,
         })),
       };
