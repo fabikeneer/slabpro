@@ -1,21 +1,9 @@
 import useSWR from 'swr';
+import api from '../utils/api';
 
 const fetcher = async (url) => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(import.meta.env.VITE_API_URL + url, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  
-  if (!res.ok) {
-    const error = new Error('An error occurred while fetching the data.');
-    error.info = await res.json();
-    error.status = res.status;
-    throw error;
-  }
-  
-  return res.json();
+  const res = await api.get(url);
+  return res.data;
 };
 
 export function useConfiguracion() {
