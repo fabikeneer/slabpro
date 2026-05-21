@@ -44,10 +44,14 @@ const PERIODOS = [
 
 function getRange(periodo) {
   const hoy = new Date();
-  let inicio, fin = new Date(hoy);
-  fin.setHours(23, 59, 59);
+  // Estabilizar el tiempo para que la caché no cambie en cada render por los milisegundos
+  hoy.setHours(0, 0, 0, 0);
+  
+  let inicio = new Date(hoy);
+  let fin = new Date(hoy);
+  fin.setHours(23, 59, 59, 999);
+  
   if (periodo === 'semana') {
-    inicio = new Date(hoy);
     inicio.setDate(hoy.getDate() - hoy.getDay());
   } else if (periodo === 'mes') {
     inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -56,7 +60,8 @@ function getRange(periodo) {
   } else {
     inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   }
-  inicio.setHours(0, 0, 0);
+  
+  inicio.setHours(0, 0, 0, 0);
   return { inicio, fin };
 }
 
@@ -83,7 +88,10 @@ export default function GastosPage() {
   const [savingForm, setSavingForm] = useState(false);
 
   const rangeActual = periodo === 'custom'
-    ? { inicio: customInicio, fin: customFin }
+    ? { 
+        inicio: new Date(new Date(customInicio).setHours(0, 0, 0, 0)), 
+        fin: new Date(new Date(customFin).setHours(23, 59, 59, 999)) 
+      }
     : getRange(periodo);
 
   const { data: gastosData, loading, refetch: refetchGastos } = useFetch('/api/gastos', {
