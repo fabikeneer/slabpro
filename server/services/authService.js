@@ -104,17 +104,14 @@ const authService = {
     const code = Math.floor(1000 + Math.random() * 9000).toString(); // 4 dígitos
     resetCodes.set(cedula, { code, expires: Date.now() + 10 * 60 * 1000, verified: false });
 
-    // Intentar obtener el logo de la empresa para el correo
-    let logoHtml = '';
+    let nombreEmpresa = 'SlabPro System';
     try {
-      const [config] = await pool.query('SELECT logo_data, nombre FROM configuracion_empresa LIMIT 1');
-      if (config.length > 0 && config[0].logo_data) {
-        logoHtml = `<div style="text-align: center; margin-bottom: 20px;">
-                      <img src="${config[0].logo_data}" alt="Logo" style="max-height: 80px; width: auto;" />
-                    </div>`;
+      const [config] = await pool.query('SELECT nombre FROM configuracion_empresa LIMIT 1');
+      if (config.length > 0 && config[0].nombre) {
+        nombreEmpresa = config[0].nombre;
       }
     } catch (e) {
-      console.error('Error obteniendo logo para correo:', e);
+      console.error('Error obteniendo config para correo:', e);
     }
 
     if (nodemailer && process.env.SMTP_USER) {
@@ -124,13 +121,13 @@ const authService = {
       });
       try {
         transporter.sendMail({
-          from: `"SlabPro System" <${process.env.SMTP_USER}>`,
+          from: `"${nombreEmpresa}" <${process.env.SMTP_USER}>`,
           to: realEmail,
-          subject: 'Código de Recuperación de SlabPro',
-          text: `El código de recuperación de SlabPro es: ${code}\nEste código expirará en 10 minutos.`,
+          subject: 'Código de Recuperación de Cuenta',
+          text: `Tu código de recuperación es: ${code}\nEste código expirará en 10 minutos.`,
           html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
-              ${logoHtml}
+              <h2 style="color: #d97706; text-align: center;">${nombreEmpresa}</h2>
               <h2 style="color: #d97706; text-align: center;">Recuperación de Contraseña</h2>
               <p style="font-size: 16px;">El código de recuperación de SlabPro es:</p>
               <div style="text-align: center; margin: 20px 0;">

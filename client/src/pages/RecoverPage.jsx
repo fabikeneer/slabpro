@@ -214,6 +214,9 @@ export default function RecoverPage() {
               <span style={{fontSize: 12, color: 'var(--text-muted)', textAlign: 'center'}}>Revisa tu bandeja de entrada o spam.</span>
             </div>
             <button type="submit" className="btn btn-primary" disabled={loading} style={styles.button}>{loading ? 'Verificando...' : 'Verificar Código'}</button>
+            <button type="button" onClick={handleSendEmailCode} className="btn" disabled={loading} style={{...styles.button, marginTop: 4, background: 'transparent', color: 'var(--accent-blue)', border: 'none', cursor: 'pointer', fontSize: 14}}>
+              ¿No recibiste el código? Reenviar
+            </button>
           </form>
         )}
 
