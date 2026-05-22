@@ -113,7 +113,7 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
                           )}
                         </div>
                       );
-                    } catch { return <span>Proyecto Completo</span>; }
+                    } catch (error) { return <span>Proyecto Completo</span>; }
                   })() : (l.descripcion || l.tipo || '—')}
                 </td>
                 <td style={{...styles.td, textAlign: 'right'}}>{l.tipo === 'proyecto_completo' ? '—' : fmtUSD(l.precio_unitario_usd)}</td>

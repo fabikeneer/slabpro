@@ -42,6 +42,14 @@ app.use(cors({
     if (!origin) return callback(null, true);
     const normalized = origin.replace(/\/$/, '');
     if (allowedOrigins.includes(normalized)) return callback(null, true);
+    
+    // Permitir acceso desde la red local (para probar en teléfonos)
+    if (normalized.startsWith('http://192.168.') || 
+        normalized.startsWith('http://10.') || 
+        normalized.startsWith('http://172.')) {
+      return callback(null, true);
+    }
+
     console.warn('[CORS] Origen rechazado:', origin);
     return callback(null, false);
   },

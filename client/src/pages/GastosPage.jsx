@@ -238,7 +238,7 @@ export default function GastosPage() {
       if (configEmpresa?.logo_data) {
         try {
           doc.addImage(configEmpresa.logo_data, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
-        } catch {
+        } catch (error) {
           doc.setTextColor(...C.textPrimary);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(13);

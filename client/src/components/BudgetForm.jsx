@@ -43,7 +43,7 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
                 try {
                   const parsed = JSON.parse(l.descripcion || '{}');
                   return { ...l, _id: crypto.randomUUID(), descripcion: parsed.texto || '', componentes: parsed.componentes || [] };
-                } catch { return { ...l, _id: crypto.randomUUID(), componentes: [] }; }
+                } catch (error) { return { ...l, _id: crypto.randomUUID(), componentes: [] }; }
               }
               return { ...l, _id: crypto.randomUUID(), componentes: [] };
             })

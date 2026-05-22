@@ -175,7 +175,7 @@ export default function ProyectosPage() {
 
   const handleEditar = async(e)=>{ e.preventDefault(); setLoadingForm(true); try{ const {data}=await api.put(`/api/proyectos/${modalEditar.id_proyecto}`,form); if(data.success){toastSuccess('Proyecto actualizado');setModalEditar(null);setForm(FORM_INIT);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} finally{setLoadingForm(false);} };
 
-  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await api.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); toastSuccess(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch{ toastError('Error al cambiar estado'); } };
+  const cambiarEstatus = async(id,nuevoEstatus)=>{ try{ await api.patch(`/api/proyectos/${id}/estado`,{estado:nuevoEstatus}); toastSuccess(`Estado: "${nuevoEstatus}"`); refetchProy(true); }catch(err){ toastError('Error al cambiar estado'); } };
 
   const eliminarProyecto = async(p)=>{ const isConfirmed = await confirmAction('¿Eliminar proyecto?', `¿Estás seguro de eliminar el proyecto "${p.nombre_proyecto||p.nombre_cliente}"?`); if(!isConfirmed) return; try{ const {data}=await api.delete(`/api/proyectos/${p.id_proyecto}`); if(data.success){toastSuccess('Eliminado');if(selectedId===p.id_proyecto)setSelectedId(null);refetchProy(true);} }catch(err){toastError(err.response?.data?.message||'Error');} };
 
@@ -188,7 +188,7 @@ export default function ProyectosPage() {
         generarFichaProyectoPDF({ ...data.data, configEmpresa });
         toastSuccess('Ficha PDF generada correctamente');
       }
-    } catch {
+    } catch (error) {
       toastError('Error al generar el PDF. Verifica la conexión.');
     } finally {
       setLoadingPDF(null);
