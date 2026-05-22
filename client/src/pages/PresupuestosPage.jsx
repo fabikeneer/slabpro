@@ -250,7 +250,7 @@ export default function PresupuestosPage() {
               <tbody>
                 {presFiltrados.map(p => (
                   <React.Fragment key={p.id}>
-                    <tr className="table-row-clickable" onClick={() => toggleExpand(p.id)}>
+                    <tr className={`table-row-clickable ${expandedId === p.id ? 'is-expanded' : ''}`} onClick={() => toggleExpand(p.id)}>
                       <td data-label="N° Presupuesto">
                         <span style={{ fontFamily: 'monospace', color: 'var(--accent-blue)', fontWeight: 600 }}>
                           {p.numero_presupuesto}

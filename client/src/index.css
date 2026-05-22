@@ -871,10 +871,24 @@ body {
   .expandable-content.expanded {
     display: block !important;
   }
+  .list-table tr.is-expanded {
+    margin-bottom: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-bottom: none !important;
+  }
+  .list-table tr.expandable-content.expanded {
+    margin-top: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-top: 1px dashed var(--border) !important;
+    padding: 0 !important;
+  }
   .expandable-details {
     padding: 16px;
     background: rgba(254, 183, 44, 0.03);
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
     display: flex;
     flex-direction: column;
     gap: 12px;

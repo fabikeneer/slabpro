@@ -263,7 +263,7 @@ export default function ProyectosPage() {
             <tbody>
               {proyectosFiltrados.map(p=>(
                 <React.Fragment key={p.id_proyecto}>
-                  <tr className={`prow table-row-clickable ${selectedId===p.id_proyecto?' sel':''}`} onClick={()=>{ setSelectedId(selectedId===p.id_proyecto?null:p.id_proyecto); toggleProyExpand(p.id_proyecto); }}>
+                  <tr className={`prow table-row-clickable ${selectedId===p.id_proyecto?' sel':''} ${expandedProyId === p.id_proyecto ? 'is-expanded' : ''}`} onClick={()=>{ setSelectedId(selectedId===p.id_proyecto?null:p.id_proyecto); toggleProyExpand(p.id_proyecto); }}>
                     <td data-label="Selección"><div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${selectedId===p.id_proyecto?'var(--accent-blue)':'var(--border)'}`,background:selectedId===p.id_proyecto?'var(--accent-blue)':'transparent',transition:'all .15s'}}/></td>
                     <td data-label="Proyecto/Cliente"><div style={{fontWeight:700,color:'var(--text-primary)'}}>{p.nombre_proyecto || p.nombre_cliente} <span style={{fontSize:11,color:'var(--text-muted)',fontWeight:'normal'}}>#{p.id_proyecto}</span></div></td>
                     <td className="hide-on-mobile" data-label="RIF/Cédula" style={{fontSize:13,color:'var(--text-secondary)',fontFamily:'monospace'}}>{p.rif_cedula||'—'}</td>
@@ -365,7 +365,7 @@ export default function ProyectosPage() {
             <tbody>
               {presFiltrados.map(p=>(
                 <React.Fragment key={p.id}>
-                  <tr className="table-row-clickable" onClick={() => togglePresExpand(p.id)}>
+                  <tr className={`table-row-clickable ${expandedPresId === p.id ? 'is-expanded' : ''}`} onClick={() => togglePresExpand(p.id)}>
                     <td data-label="N° Presupuesto"><span style={{fontFamily:'monospace',color:'var(--accent-purple)',fontWeight:600}}>{p.numero_presupuesto}</span></td>
                     <td data-label="Cliente"><div style={{fontWeight:600}}>{p.cliente_nombre||'—'}</div>{p.cliente_rif&&<div style={{fontSize:11,color:'var(--text-muted)'}}>{p.cliente_rif}</div>}</td>
                     <td className="hide-on-mobile" data-label="Proyecto" style={{maxWidth:200,color:'var(--text-secondary)'}}><div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.proyecto_descripcion||'—'}</div></td>
