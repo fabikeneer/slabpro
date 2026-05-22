@@ -347,11 +347,13 @@ body {
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 12px;
-    align-items: flex-end; /* Modales estilo "bottom sheet" en móviles lucen mejor, pero centrado está ok. Los dejamos centrados con menos padding. */
+    padding-bottom: 85px; /* Espacio para el nav inferior */
+    align-items: center; 
   }
   .modal-content {
     padding: 20px;
     border-radius: var(--radius-lg);
+    max-height: calc(100vh - 110px);
   }
 }
 
