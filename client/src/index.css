@@ -223,9 +223,10 @@ body {
   .hide-on-mobile { display: none !important; }
   .show-on-mobile { display: table-cell !important; }
 
-  /* Touch targets for accessibility */
-  .btn, .form-input, .form-select {
+  /* Touch targets for accessibility and prevent iOS zoom */
+  .btn, .form-input, .form-select, .form-textarea, input, select, textarea {
     min-height: 44px;
+    font-size: 16px !important; /* Previene el zoom en Safari iOS */
   }
   
   /* Cards padding reduction */
