@@ -884,6 +884,13 @@ body {
     border-top: 1px dashed var(--border) !important;
     padding: 0 !important;
   }
+  .list-table tr.expandable-content.expanded td {
+    display: block !important;
+    padding: 0 !important;
+  }
+  .list-table tr.expandable-content.expanded td::before {
+    display: none !important;
+  }
   .expandable-details {
     padding: 16px;
     background: rgba(254, 183, 44, 0.03);

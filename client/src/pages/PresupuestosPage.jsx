@@ -195,19 +195,19 @@ export default function PresupuestosPage() {
 
       {/* Tabla */}
       <div className="card">
-        <div className="card-header">
+        <div className="card-header" style={{ flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div className="card-title">Historial de Presupuestos</div>
             <div className="card-subtitle">{presFiltrados.length} registros encontrados</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '300px', flex: '1 1 200px' }}>
               <svg style={{ position: 'absolute', left: 10, top: 11, color: 'var(--text-muted)' }} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input
                 type="text"
                 className="form-input"
-                style={{ paddingLeft: 32, fontSize: 13, padding: '7px 10px 7px 32px', width: 220 }}
-                placeholder="Buscar por cliente, N° o proyecto..."
+                style={{ paddingLeft: 32, fontSize: 14, width: '100%' }}
+                placeholder="Buscar presupuesto..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
               />
