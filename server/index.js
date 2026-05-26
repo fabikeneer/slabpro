@@ -63,6 +63,9 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+const capitalizeMiddleware = require('./middlewares/capitalize');
+app.use(capitalizeMiddleware);
+
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
