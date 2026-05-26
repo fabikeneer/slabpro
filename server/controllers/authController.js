@@ -1,12 +1,12 @@
 const authService = require('../services/authService');
 
 const authController = {
-  // POST /api/auth/login
   async login(req, res) {
     try {
       const { cedula, password } = req.body;
-      if (!cedula || !password) return res.status(400).json({ success: false, message: 'Cédula y contraseña son requeridas.' });
-      const { token, user } = await authService.login(cedula, password);
+      const pass = password ? password.trim() : password;
+      if (!cedula || !pass) return res.status(400).json({ success: false, message: 'Cédula y contraseña son requeridas.' });
+      const { token, user } = await authService.login(cedula, pass);
       res.cookie('slabpro_token', token, {
         httpOnly: true,
         secure: true, // Requerido para sameSite: 'none'
