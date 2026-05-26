@@ -39,13 +39,10 @@ export default function RecoverPage() {
         }
         setMethods(data);
         
-        // Si solo tiene un método, saltar la selección
-        if (data.hasQuestions && !data.hasEmail) {
+        if (data.hasQuestions) {
           selectMethod('pregunta');
-        } else if (!data.hasQuestions && data.hasEmail) {
-          selectMethod('email');
         } else {
-          setStep(2); // Seleccionar método
+          toastError('No tienes preguntas de seguridad configuradas. Contacta al administrador.');
         }
       }
     } catch (err) {
@@ -165,11 +162,6 @@ export default function RecoverPage() {
             {methods?.hasQuestions && (
               <button type="button" className="btn" style={styles.outlineButton} onClick={() => selectMethod('pregunta')}>
                 Usar Pregunta de Seguridad
-              </button>
-            )}
-            {methods?.hasEmail && (
-              <button type="button" className="btn" style={styles.outlineButton} onClick={() => selectMethod('email')}>
-                Enviar Código al Correo
               </button>
             )}
           </div>
