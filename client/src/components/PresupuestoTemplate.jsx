@@ -52,7 +52,7 @@ export default function PresupuestoTemplate({ form, totales, guardado, configEmp
         <section className="client-dates" style={styles.clientDates}>
           <div>
             <div className="label-gold" style={styles.labelGold}>Cliente</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 300, margin: '0 0 0.25rem', color: vars.ink, fontStyle: 'normal', lineHeight: 1.3 }}>{form?.cliente_nombre || 'Cliente An\u00f3nimo'}</div>
+            <div style={styles.clientName}>{form?.cliente_nombre || 'Cliente An\u00f3nimo'}</div>
             <p className="client-role" style={styles.clientRole}>{form?.cliente_rif || 'Sin RIF'}</p>
           </div>
           <div className="dates-col" style={styles.datesCol}>
@@ -310,11 +310,11 @@ const styles = {
     alignItems: 'flex-start'
   },
   clientName: {
-    fontSize: '1.25rem',
-    fontWeight: 400,
-    margin: '0 0 0.25rem',
-    color: vars.ink,
-    fontStyle: 'normal'
+    fontSize: '0.8rem',
+    fontWeight: 'normal',
+    margin: '0',
+    color: vars.inkSoft,
+    lineHeight: '1.75'
   },
   clientRole: {
     fontSize: '0.8rem',
