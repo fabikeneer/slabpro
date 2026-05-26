@@ -249,6 +249,9 @@ function dibujarReciboPago(doc, x, y, w, h, data) {
   drawField('APELLIDO', data.apellido, ly);
   ly += rowH;
 
+  drawField('CONCEPTO', data.concepto || '', ly);
+  ly += rowH;
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.text('FIRMA', ix + 2, ly);

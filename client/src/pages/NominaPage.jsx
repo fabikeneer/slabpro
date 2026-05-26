@@ -49,6 +49,7 @@ export default function NominaPage() {
         tasa_dia: 36, // Valor por defecto
         concepto: ''
     });
+    const [editandoPagoId, setEditandoPagoId] = useState(null);
     const [pagoGuardado, setPagoGuardado] = useState(null);
     const [esExterno, setEsExterno] = useState(false);
     const [externo, setExterno] = useState({ beneficiario: '', descripcion: '' });
@@ -142,7 +143,14 @@ export default function NominaPage() {
             if (esExterno && externo.descripcion && !nuevoPago.concepto) {
                 payload.concepto = externo.descripcion;
             }
-            await api.post('/api/nomina/registrar', payload);
+
+            if (editandoPagoId) {
+                await api.put(`/api/nomina/pago/${editandoPagoId}`, payload);
+                toastSuccess('Pago actualizado correctamente');
+            } else {
+                await api.post('/api/nomina/registrar', payload);
+                toastSuccess('Pago registrado correctamente');
+            }
             
             // Preparar datos para el comprobante
             const empleadoInfo = empleados.find(e => String(e.id) === String(nuevoPago.id_empleado));
@@ -162,6 +170,7 @@ export default function NominaPage() {
 
             setPagoGuardado(datosComprobante);
             
+            setEditandoPagoId(null);
             setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '' });
             setExterno({ beneficiario: '', descripcion: '' });
             setEsExterno(false);
@@ -177,6 +186,32 @@ export default function NominaPage() {
 
     const descargarComprobante = (pago) => {
         descargarComprobanteProfesional(pago, configEmpresa);
+    };
+
+    const editarPago = (pago) => {
+        setEditandoPagoId(pago.id);
+        const esExt = !pago.id_empleado;
+        setEsExterno(esExt);
+        setNuevoPago({
+            id_empleado: pago.id_empleado || '',
+            id_proyecto: pago.id_proyecto || '',
+            monto_usd: pago.monto_usd,
+            tasa_dia: pago.tasa_dia,
+            concepto: pago.concepto
+        });
+        if (esExt) {
+            setExterno({ beneficiario: pago.beneficiario || '', descripcion: pago.concepto });
+        } else {
+            setExterno({ beneficiario: '', descripcion: '' });
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelarEdicionPago = () => {
+        setEditandoPagoId(null);
+        setEsExterno(false);
+        setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '' });
+        setExterno({ beneficiario: '', descripcion: '' });
     };
 
     const exportarReportePDF = () => {
@@ -412,7 +447,7 @@ export default function NominaPage() {
                     {/* Registro de Nuevo Pago */}
                     <div className="card" style={{ marginTop: 24 }}>
                         <div className="card-header">
-                            <h3 className="card-title">Registrar Nuevo Pago</h3>
+                            <h3 className="card-title">{editandoPagoId ? 'Editar Pago' : 'Registrar Nuevo Pago'}</h3>
                             <div className="card-subtitle">Asigna pagos de nómina directamente al trabajador y proyecto</div>
                         </div>
                         
@@ -546,9 +581,14 @@ export default function NominaPage() {
                                 </div>
                             </div>
 
-                            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: 16, gap: 12 }}>
+                                {editandoPagoId && (
+                                    <button type="button" className="btn btn-ghost" onClick={cancelarEdicionPago} disabled={loadingPago}>
+                                        Cancelar
+                                    </button>
+                                )}
                                 <button type="submit" className="btn btn-primary" disabled={loadingPago}>
-                                    {loadingPago ? <span className="spinner"></span> : 'Guardar Pago'}
+                                    {loadingPago ? <span className="spinner"></span> : (editandoPagoId ? 'Actualizar Pago' : 'Guardar Pago')}
                                 </button>
                             </div>
                         </form>
@@ -631,6 +671,7 @@ export default function NominaPage() {
                                                     <th>Concepto</th>
                                                     <th>Proyecto</th>
                                                     <th>Monto ($)</th>
+                                                    <th>Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -650,6 +691,16 @@ export default function NominaPage() {
                                                         <td data-label="Proyecto">{pago.proyecto || 'Desconocido'}</td>
                                                         <td data-label="Monto USD" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                                                             {fmtUSD(pago.monto_usd)}
+                                                        </td>
+                                                        <td data-label="Acciones">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => editarPago(pago)}
+                                                                className="btn btn-ghost"
+                                                                style={{ padding: '4px 8px', color: 'var(--accent-blue)', fontSize: 12 }}
+                                                            >
+                                                                Editar
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 ))}

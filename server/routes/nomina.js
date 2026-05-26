@@ -53,7 +53,37 @@ router.post('/registrar', async (req, res) => {
         console.error('Error en POST /nomina/registrar:', error);
         res.status(500).json({ success: false, message: 'Error al procesar el pago.' });
     } finally {
-        // Siempre liberar la conexión al final para no agotar el pool
+        conn.release();
+    }
+});
+
+// PUT /api/nomina/pago/:id
+router.put('/pago/:id', async (req, res) => {
+    const { id_empleado, id_proyecto, monto_usd, tasa_dia, concepto, fecha_pago, beneficiario, es_externo } = req.body;
+    const monto_bs = monto_usd * tasa_dia;
+    const pagoId = req.params.id;
+
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const proyecto_id = id_proyecto || null;
+        const empleado_id = es_externo ? null : (id_empleado || null);
+        const beneficiario_val = es_externo ? (beneficiario || 'Beneficiario Externo') : null;
+
+        const sqlUpdateNomina = `UPDATE pagos_nomina 
+            SET id_empleado = ?, id_proyecto = ?, monto_usd = ?, tasa_dia = ?, monto_bs = ?, concepto = ?, beneficiario = ?
+            WHERE id_pago = ?`;
+        
+        await conn.query(sqlUpdateNomina, [empleado_id, proyecto_id, monto_usd, tasa_dia, monto_bs, concepto, beneficiario_val, pagoId]);
+
+        await conn.commit();
+        res.status(200).json({ success: true, message: 'Pago actualizado correctamente' });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Error en PUT /nomina/pago/:id:', error);
+        res.status(500).json({ success: false, message: 'Error al actualizar el pago.' });
+    } finally {
         conn.release();
     }
 });
@@ -66,7 +96,7 @@ router.get('/reporte', async (req, res) => {
         let sqlResumen = `SELECT SUM(monto_usd) as total_usd, SUM(monto_bs) as total_bs FROM pagos_nomina p WHERE 1=1`;
         let sqlLista = `
             SELECT 
-                p.id_pago as id, p.fecha_pago, p.concepto, p.monto_usd, p.monto_bs,
+                p.id_pago as id, p.fecha_pago, p.concepto, p.monto_usd, p.monto_bs, p.tasa_dia, p.id_empleado, p.id_proyecto,
                 COALESCE(e.nombre, p.beneficiario, 'Externo') as trabajador,
                 p.beneficiario,
                 COALESCE(pr.nombre_proyecto, pr.nombre_cliente, 'Desconocido') as proyecto
