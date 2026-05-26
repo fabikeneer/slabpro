@@ -547,7 +547,7 @@ export default function GastosPage() {
             </div>
             <div className="form-group">
               <label className="form-label">Fecha del Gasto</label>
-              <DatePicker selected={form.fecha_gasto instanceof Date ? form.fecha_gasto : new Date()} onChange={d => setForm({...form, fecha_gasto:d})} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+              <DatePicker selected={form.fecha_gasto instanceof Date ? form.fecha_gasto : new Date()} onChange={d => setForm({...form, fecha_gasto:d})} className="form-input" dateFormat="dd/MM/yyyy" locale="es" popperPlacement="bottom-start" />
             </div>
             <div className="form-group" style={{ justifyContent:'center' }}>
               <div style={{ padding:'12px 16px', background:'rgba(16,185,129,0.1)', borderRadius:8, border:'1px solid rgba(16,185,129,0.2)' }}>
@@ -587,11 +587,11 @@ export default function GastosPage() {
               <>
                 <div className="form-group">
                   <label className="form-label">Desde</label>
-                  <DatePicker selected={customInicio} onChange={setCustomInicio} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                  <DatePicker selected={customInicio} onChange={setCustomInicio} className="form-input" dateFormat="dd/MM/yyyy" locale="es" popperPlacement="bottom-start" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Hasta</label>
-                  <DatePicker selected={customFin} onChange={setCustomFin} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                  <DatePicker selected={customFin} onChange={setCustomFin} className="form-input" dateFormat="dd/MM/yyyy" locale="es" popperPlacement="bottom-start" />
                 </div>
               </>
             )}

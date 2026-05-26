@@ -422,6 +422,7 @@ export default function NominaPage() {
                                 className="form-input"
                                 dateFormat="dd/MM/yyyy"
                                 locale="es"
+                                popperPlacement="bottom-start"
                             />
                         </div>
                         <div className="form-group" style={{ flex: '1 1 140px' }}>
@@ -432,6 +433,7 @@ export default function NominaPage() {
                                 className="form-input"
                                 dateFormat="dd/MM/yyyy"
                                 locale="es"
+                                popperPlacement="bottom-start"
                             />
                         </div>
                         <button 
@@ -810,11 +812,11 @@ export default function NominaPage() {
                         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div className="form-group" style={{ flex: '1 1 140px' }}>
                                 <label className="form-label">Semana desde:</label>
-                                <DatePicker selected={startDate} onChange={(date) => setStartDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                                <DatePicker selected={startDate} onChange={(date) => setStartDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" popperPlacement="bottom-start" />
                             </div>
                             <div className="form-group" style={{ flex: '1 1 140px' }}>
                                 <label className="form-label">Semana hasta:</label>
-                                <DatePicker selected={endDate} onChange={(date) => setEndDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" />
+                                <DatePicker selected={endDate} onChange={(date) => setEndDate(date)} className="form-input" dateFormat="dd/MM/yyyy" locale="es" popperPlacement="bottom-start" />
                             </div>
                             <button type="button" onClick={toggleTodosEmpleados} className="btn btn-ghost" style={{ padding: '11px 16px' }}>
                                 {selectedEmpIds.length === empleadosFiltrados.length && empleadosFiltrados.length > 0 ? 'Quitar selección' : 'Seleccionar visibles'}

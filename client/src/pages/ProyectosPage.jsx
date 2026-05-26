@@ -85,6 +85,7 @@ function FormProyecto({ form, setForm, onSubmit, loading, modoEdicion }) {
               dateFormat="dd/MM/yyyy"
               locale="es"
               placeholderText="DD/MM/YYYY"
+              popperPlacement="bottom-start"
             />
           </div>
           <div className="form-group" style={{gridColumn:'1 / -1'}}>
