@@ -22,7 +22,8 @@ api.interceptors.response.use(
       const url = error.config?.url || '';
       const isAuthCheck = url.includes('/api/auth/settings/me');
       const isLogin = url.includes('/api/auth/login');
-      if (!isAuthCheck && !isLogin && window.location.pathname !== '/login') {
+      const isRecover = url.includes('/api/auth/recover');
+      if (!isAuthCheck && !isLogin && !isRecover && window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
