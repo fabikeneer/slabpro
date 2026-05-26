@@ -930,3 +930,8 @@ body {
   .expandable-content { display: none !important; }
 }
 
+
+/* Fix DatePicker Movil */
+@media (max-width: 500px) {
+  .react-datepicker-popper { left: 0 !important; transform: translateY(35px) !important; width: 100%; display: flex; justify-content: center; }
+}
