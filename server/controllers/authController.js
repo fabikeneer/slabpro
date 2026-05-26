@@ -68,6 +68,7 @@ const authController = {
     } catch (error) {
       if (error.message === 'USUARIO_NO_ENCONTRADO') return res.status(404).json({ success: false, message: 'Cédula no encontrada.' });
       if (error.message === 'EMAIL_NO_COINCIDE') return res.status(400).json({ success: false, message: 'El correo no coincide con el registrado en el sistema.' });
+      if (error.message === 'ERROR_ENVIANDO_CORREO') return res.status(500).json({ success: false, message: 'Error al intentar enviar el correo. Por favor, intenta de nuevo o contacta soporte.' });
       res.status(500).json({ success: false, message: 'Error interno.' });
     }
   },

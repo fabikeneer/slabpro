@@ -121,7 +121,7 @@ const authService = {
         tls: { rejectUnauthorized: false }
       });
       try {
-        transporter.sendMail({
+        await transporter.sendMail({
           from: process.env.SMTP_USER,
           to: realEmail,
           subject: 'Código de Recuperación de Cuenta',
@@ -141,16 +141,11 @@ const authService = {
               <p style="font-size: 12px; color: #999; text-align: center;">Si no solicitaste este código, ignora este correo.</p>
             </div>
           `
-        }).then(() => {
-          console.log(`[MAIL] Código enviado a ${realEmail}`);
-        }).catch(err => {
-          console.error('Error enviando correo SMTP:', err);
         });
-        
-        console.log(`[MAIL_QUEUE] Procesando envío a ${realEmail} en segundo plano...`);
+        console.log(`[MAIL] Código enviado a ${realEmail}`);
       } catch (err) {
         console.error('Error enviando correo SMTP:', err);
-        console.log(`[SIMULACIÓN] Código para ${realEmail}: ${code}`);
+        throw new Error('ERROR_ENVIANDO_CORREO');
       }
     } else {
       console.log(`[SIMULACIÓN] Código generado para ${realEmail}: ${code}`);
