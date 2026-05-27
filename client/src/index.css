@@ -240,14 +240,15 @@ body {
     border: none !important;
     background: transparent !important;
   }
-  .list-table thead {
+  .list-table thead, .lineas-table thead {
     display: none; /* Ocultamos el encabezado horizontal */
   }
-  .list-table, .list-table tbody, .list-table tr, .list-table td {
+  .list-table, .list-table tbody, .list-table tr, .list-table td,
+  .lineas-table, .lineas-table tbody, .lineas-table tr, .lineas-table td {
     display: block;
     width: 100%;
   }
-  .list-table tr {
+  .list-table tr, .lineas-table tr {
     margin-bottom: 16px;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -255,6 +256,8 @@ body {
     padding: 8px 16px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   }
+
+  /* Estilos específicos para list-table (datos side-by-side) */
   .list-table td {
     display: flex;
     justify-content: space-between;
@@ -268,7 +271,6 @@ body {
     justify-content: flex-end; /* Acciones a la derecha */
     padding-top: 14px;
   }
-  /* Usamos el data-label de React como título a la izquierda */
   .list-table td::before {
     content: attr(data-label);
     font-weight: 700;
@@ -281,6 +283,33 @@ body {
   }
   .list-table td span, .list-table td div {
     text-align: right;
+  }
+
+  /* Estilos específicos para lineas-table (formularios stack vertical) */
+  .lineas-table td {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--border);
+    text-align: left !important;
+  }
+  .lineas-table td:last-child {
+    border-bottom: none;
+    align-items: center; /* Centrar botón eliminar */
+    padding-top: 16px;
+  }
+  .lineas-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .lineas-table td.subtotal-cell {
+    align-items: flex-start;
   }
 }
 
