@@ -466,10 +466,11 @@ export default function BudgetForm({ presupuestoEdit, onCancel }) {
       {/* Tabs de navegación */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {/* Tab header */}
-        <div style={{
+        <div className="tabs-container" style={{
           display: 'flex',
           borderBottom: '1px solid var(--border)',
           background: 'var(--bg-secondary)',
+          overflowX: 'auto',
         }}>
           {[
             { key: 'cliente', label: 'Cliente & Proyecto' },

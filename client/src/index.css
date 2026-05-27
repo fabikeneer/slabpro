@@ -959,5 +959,15 @@ body {
   .expandable-content { display: none !important; }
 }
 
-
-
+/* ── Contenedor de Tabs (Scroll Horizontal) ─────────────────── */
+.tabs-container {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+.tabs-container > button {
+  flex-shrink: 0;
+}
