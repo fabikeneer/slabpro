@@ -18,6 +18,15 @@ import { toastSuccess, toastError, confirmAction } from '../utils/alerts';
 const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 const fmtBs  = (n) => `Bs. ${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 
+// Extrae DD/MM/YYYY directo del string ISO sin depender de timezone del navegador
+const fmtDate = (d) => {
+  if (!d) return '-';
+  const s = typeof d === 'string' ? d : d.toISOString?.() ?? String(d);
+  const [yyyy, mm, dd] = s.slice(0, 10).split('-');
+  if (!yyyy || !mm || !dd) return '-';
+  return `${dd}/${mm}/${yyyy}`;
+};
+
 registerLocale('es', es);
 const PERIODOS = [
   { label: 'Esta semana',  value: 'semana' },
@@ -767,7 +776,7 @@ export default function NominaPage() {
                                                                 style={{ accentColor: 'var(--accent-blue)', cursor: 'pointer' }}
                                                             />
                                                         </td>
-                                                        <td data-label="Fecha">{new Date(pago.fecha_pago).toLocaleDateString('es-VE')}</td>
+                                                        <td data-label="Fecha">{fmtDate(pago.fecha_pago)}</td>
                                                         <td data-label="Trabajador">{pago.trabajador || 'Desconocido'}</td>
                                                         <td data-label="Concepto">{pago.concepto}</td>
                                                         <td data-label="Proyecto">{pago.proyecto || 'Desconocido'}</td>
