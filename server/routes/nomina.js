@@ -72,10 +72,10 @@ router.put('/pago/:id', async (req, res) => {
         const beneficiario_val = es_externo ? (beneficiario || 'Beneficiario Externo') : null;
 
         const sqlUpdateNomina = `UPDATE pagos_nomina 
-            SET id_empleado = ?, id_proyecto = ?, monto_usd = ?, tasa_dia = ?, monto_bs = ?, concepto = ?, beneficiario = ?
+            SET id_empleado = ?, id_proyecto = ?, monto_usd = ?, tasa_dia = ?, monto_bs = ?, concepto = ?, beneficiario = ?, fecha_pago = ?
             WHERE id_pago = ?`;
         
-        await conn.query(sqlUpdateNomina, [empleado_id, proyecto_id, monto_usd, tasa_dia, monto_bs, concepto, beneficiario_val, pagoId]);
+        await conn.query(sqlUpdateNomina, [empleado_id, proyecto_id, monto_usd, tasa_dia, monto_bs, concepto, beneficiario_val, fecha_pago, pagoId]);
 
         await conn.commit();
         res.status(200).json({ success: true, message: 'Pago actualizado correctamente' });

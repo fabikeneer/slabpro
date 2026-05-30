@@ -19,13 +19,42 @@ const fmtUSD = (n) => `$${Number(n).toLocaleString('es-VE', { minimumFractionDig
 const fmtBs  = (n) => `Bs. ${Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 
 registerLocale('es', es);
+const PERIODOS = [
+  { label: 'Esta semana',  value: 'semana' },
+  { label: 'Este mes',     value: 'mes' },
+  { label: 'Todos',        value: 'todos' },
+  { label: 'Personalizado',value: 'custom' },
+];
+
+function getRange(periodo) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  let inicio = new Date(hoy);
+  let fin = new Date(hoy);
+  fin.setHours(23, 59, 59, 999);
+  
+  if (periodo === 'semana') {
+    inicio.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes
+  } else if (periodo === 'mes') {
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  } else if (periodo === 'todos') {
+    inicio = new Date(2020, 0, 1); // Fecha antigua
+  } else {
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  }
+  
+  inicio.setHours(0, 0, 0, 0);
+  return { inicio, fin };
+}
 
 export default function NominaPage() {
     const [activeTab, setActiveTab] = useState('pagos'); // 'pagos' | 'personal'
 
     // ESTADOS PAGOS Y REPORTES
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate]   = useState(new Date());
+    const [periodo, setPeriodo] = useState('mes');
+    const [startDate, setStartDate] = useState(getRange('mes').inicio);
+    const [endDate, setEndDate]   = useState(getRange('mes').fin);
     const [idEmpleado, setIdEmpleado] = useState('');
     const [busqEmpleado, setBusqEmpleado] = useState('');
     const [showDropEmp, setShowDropEmp] = useState(false);
@@ -47,7 +76,8 @@ export default function NominaPage() {
         id_proyecto: '',
         monto_usd: '',
         tasa_dia: 36, // Valor por defecto
-        concepto: ''
+        concepto: '',
+        fecha_pago: new Date()
     });
     const [editandoPagoId, setEditandoPagoId] = useState(null);
     const [pagoGuardado, setPagoGuardado] = useState(null);
@@ -99,11 +129,21 @@ export default function NominaPage() {
     const obtenerReporte = async () => {
         setLoading(true);
         try {
+            let actualInicio = startDate;
+            let actualFin = endDate;
+            if (periodo !== 'custom') {
+                const range = getRange(periodo);
+                actualInicio = range.inicio;
+                actualFin = range.fin;
+                setStartDate(actualInicio);
+                setEndDate(actualFin);
+            }
+
             const { data } = await api.get('/api/nomina/reporte', {
                 params: {
                     id: idEmpleado,
-                    inicio: startDate.toISOString(),
-                    fin: endDate.toISOString()
+                    inicio: actualInicio.toISOString(),
+                    fin: actualFin.toISOString()
                 }
             });
             setReporte(data);
@@ -116,6 +156,12 @@ export default function NominaPage() {
             setLoading(false);
         }
     };
+
+    // Auto load reporte en montura
+    useEffect(() => {
+        obtenerReporte();
+        // eslint-disable-next-line
+    }, [periodo, idEmpleado]);
 
     const registrarPago = async (e) => {
         e.preventDefault();
@@ -135,7 +181,7 @@ export default function NominaPage() {
         try {
             const payload = {
                 ...nuevoPago,
-                fecha_pago: new Date().toISOString().split('T')[0],
+                fecha_pago: (nuevoPago.fecha_pago instanceof Date ? nuevoPago.fecha_pago : new Date(nuevoPago.fecha_pago)).toISOString().split('T')[0],
                 es_externo: esExterno,
                 beneficiario: esExterno ? externo.beneficiario : undefined,
             };
@@ -171,7 +217,7 @@ export default function NominaPage() {
             setPagoGuardado(datosComprobante);
             
             setEditandoPagoId(null);
-            setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '' });
+            setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '', fecha_pago: new Date() });
             setExterno({ beneficiario: '', descripcion: '' });
             setEsExterno(false);
             if (reporte) obtenerReporte();
@@ -197,7 +243,8 @@ export default function NominaPage() {
             id_proyecto: pago.id_proyecto || '',
             monto_usd: pago.monto_usd,
             tasa_dia: pago.tasa_dia,
-            concepto: pago.concepto
+            concepto: pago.concepto,
+            fecha_pago: pago.fecha_pago ? (() => { const d = new Date(pago.fecha_pago); return isNaN(d) ? new Date() : d; })() : new Date()
         });
         if (esExt) {
             setExterno({ beneficiario: pago.beneficiario || '', descripcion: pago.concepto });
@@ -210,7 +257,7 @@ export default function NominaPage() {
     const cancelarEdicionPago = () => {
         setEditandoPagoId(null);
         setEsExterno(false);
-        setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '' });
+        setNuevoPago({ id_empleado: '', id_proyecto: '', monto_usd: '', tasa_dia: nuevoPago.tasa_dia, concepto: '', fecha_pago: new Date() });
         setExterno({ beneficiario: '', descripcion: '' });
     };
 
@@ -414,28 +461,46 @@ export default function NominaPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 140px' }}>
-                            <label className="form-label">Desde:</label>
-                            <DatePicker 
-                                selected={startDate} 
-                                onChange={(date) => setStartDate(date)} 
-                                className="form-input"
-                                dateFormat="dd/MM/yyyy"
-                                locale="es"
-                                popperPlacement="bottom-start"
-                            />
+                        <div className="form-group" style={{ flex: '1 1 200px' }}>
+                            <label className="form-label">Período:</label>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {PERIODOS.map(p => (
+                                    <button 
+                                        key={p.value} 
+                                        onClick={() => setPeriodo(p.value)}
+                                        style={{ padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: `1px solid ${periodo === p.value ? 'var(--accent-blue)' : 'var(--border)'}`, background: periodo === p.value ? 'rgba(59,130,246,0.12)' : 'var(--bg-input)', color: periodo === p.value ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        <div className="form-group" style={{ flex: '1 1 140px' }}>
-                            <label className="form-label">Hasta:</label>
-                            <DatePicker 
-                                selected={endDate} 
-                                onChange={(date) => setEndDate(date)} 
-                                className="form-input"
-                                dateFormat="dd/MM/yyyy"
-                                locale="es"
-                                popperPlacement="bottom-start"
-                            />
-                        </div>
+                        {periodo === 'custom' && (
+                            <>
+                                <div className="form-group" style={{ flex: '1 1 140px' }}>
+                                    <label className="form-label">Desde:</label>
+                                    <DatePicker 
+                                        selected={startDate} 
+                                        onChange={(date) => setStartDate(date)} 
+                                        className="form-input"
+                                        dateFormat="dd/MM/yyyy"
+                                        locale="es"
+                                        popperPlacement="bottom-start"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ flex: '1 1 140px' }}>
+                                    <label className="form-label">Hasta:</label>
+                                    <DatePicker 
+                                        selected={endDate} 
+                                        onChange={(date) => setEndDate(date)} 
+                                        className="form-input"
+                                        dateFormat="dd/MM/yyyy"
+                                        locale="es"
+                                        popperPlacement="bottom-start"
+                                    />
+                                </div>
+                            </>
+                        )}
                         <button 
                             onClick={obtenerReporte}
                             className="btn btn-primary"
@@ -533,6 +598,18 @@ export default function NominaPage() {
                                     placeholder="Ej: Quincena, Bono..."
                                     value={nuevoPago.concepto}
                                     onChange={(e) => setNuevoPago({...nuevoPago, concepto: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Fecha de Pago <span className="required">*</span></label>
+                                <DatePicker 
+                                    selected={nuevoPago.fecha_pago instanceof Date ? nuevoPago.fecha_pago : new Date()} 
+                                    onChange={d => setNuevoPago({...nuevoPago, fecha_pago: d})} 
+                                    className="form-input" 
+                                    dateFormat="dd/MM/yyyy" 
+                                    locale="es" 
+                                    popperPlacement="bottom-start" 
                                 />
                             </div>
 
