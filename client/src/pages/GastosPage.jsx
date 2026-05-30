@@ -150,11 +150,12 @@ export default function GastosPage() {
     }
     setSavingForm(true);
     try {
+      const d = form.fecha_gasto instanceof Date ? form.fecha_gasto : new Date(form.fecha_gasto);
+      const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      
       const payload = {
         ...form,
-        fecha_gasto: form.fecha_gasto instanceof Date
-          ? form.fecha_gasto.toISOString().split('T')[0]
-          : form.fecha_gasto,
+        fecha_gasto: localDate,
       };
       if (editId) {
         await api.put(`/api/gastos/${editId}`, payload);

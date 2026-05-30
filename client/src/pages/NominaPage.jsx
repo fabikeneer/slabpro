@@ -179,9 +179,12 @@ export default function NominaPage() {
 
         setLoadingPago(true);
         try {
+            const d = nuevoPago.fecha_pago instanceof Date ? nuevoPago.fecha_pago : new Date(nuevoPago.fecha_pago);
+            const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
             const payload = {
                 ...nuevoPago,
-                fecha_pago: (nuevoPago.fecha_pago instanceof Date ? nuevoPago.fecha_pago : new Date(nuevoPago.fecha_pago)).toISOString().split('T')[0],
+                fecha_pago: localDate,
                 es_externo: esExterno,
                 beneficiario: esExterno ? externo.beneficiario : undefined,
             };
