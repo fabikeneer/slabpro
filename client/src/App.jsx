@@ -11,6 +11,7 @@ import RecoverPage      from './pages/RecoverPage';
 import EmpresaPage      from './pages/EmpresaPage';
 import ConfiguracionPage from './pages/ConfiguracionPage';
 import ProtectedRoute   from './components/ProtectedRoute';
+import TrialNotice      from './components/TrialNotice';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 
 function Sidebar() {
@@ -146,6 +147,7 @@ function MainLayout() {
       <div className="mobile-layout-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <MobileHeader />
         <main className="main-content" style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 60px)' }}>
+          <TrialNotice />
           <div style={{ flex: 1 }}>
             <Outlet />
           </div>
