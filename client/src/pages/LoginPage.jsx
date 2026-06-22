@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { toastError, toastSuccess } from '../utils/alerts';
 import api from '../utils/api';
-import TrialNotice from '../components/TrialNotice';
 
 export default function LoginPage() {
   const [cedula, setCedula]     = useState('');
@@ -45,9 +44,6 @@ export default function LoginPage() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.noticeWrap}>
-        <TrialNotice />
-      </div>
       <div style={styles.card}>
 
         {/* Logo */}
@@ -134,12 +130,9 @@ export default function LoginPage() {
 
 const styles = {
   container: {
-    display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
     minHeight: '100vh', width: '100vw', padding: '24px 16px',
     backgroundColor: 'var(--bg-app)', fontFamily: 'var(--font-sans)',
-  },
-  noticeWrap: {
-    width: '100%', maxWidth: '480px', marginBottom: 16,
   },
   card: {
     backgroundColor: 'var(--bg-panel)', padding: '40px',
