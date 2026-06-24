@@ -70,6 +70,7 @@ export default function LoginPage() {
               </svg>
               <input
                 type="text"
+                name="cedula"
                 className="form-input"
                 style={styles.inputWithIcon}
                 value={cedula}
@@ -78,6 +79,7 @@ export default function LoginPage() {
                 maxLength={10}
                 autoFocus
                 inputMode="numeric"
+                autoComplete="username"
               />
             </div>
           </div>
@@ -92,11 +94,13 @@ export default function LoginPage() {
               </svg>
               <input
                 type={showPass ? 'text' : 'password'}
+                name="password"
                 className="form-input"
                 style={{ ...styles.inputWithIcon, paddingRight: 42 }}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
               <button
                 type="button"
