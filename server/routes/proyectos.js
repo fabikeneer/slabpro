@@ -2,6 +2,8 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { getOrSetCache, invalidateProyectos } = require('../utils/cacheUtils');
+const { TTL, keys } = require('../utils/cacheKeys');
 
 // Esquema real de la tabla:
 //   id_proyecto (PK auto), nombre_proyecto VARCHAR(200), nombre_cliente VARCHAR(100), rif_cedula VARCHAR(20),
@@ -31,26 +33,33 @@ router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
-    const offset = (page - 1) * limit;
 
-    const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM proyectos');
-
-    const [rows] = await db.query(`
+    const payload = await getOrSetCache(
+      keys.proyectosList(page, limit),
+      TTL.LIST,
+      async () => {
+        const offset = (page - 1) * limit;
+        const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM proyectos');
+        const [rows] = await db.query(`
       SELECT * FROM proyectos
       ORDER BY fecha_inicio DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 
-    res.json({ 
-      success: true, 
-      data: rows,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
+        return {
+          success: true,
+          data: rows,
+          pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          },
+        };
       }
-    });
+    );
+
+    res.json(payload);
   } catch (err) {
     console.error('Error GET /proyectos:', err);
     res.status(500).json({ success: false, message: 'Error al obtener proyectos.' });
@@ -63,7 +72,8 @@ router.get('/', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.get('/activos', async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const data = await getOrSetCache(keys.proyectosActivos(), TTL.ACTIVOS, async () => {
+      const [rows] = await db.query(`
       SELECT
         id_proyecto AS id,
         COALESCE(nombre_proyecto, nombre_cliente) AS nombre,
@@ -72,7 +82,9 @@ router.get('/activos', async (req, res) => {
       WHERE estatus IN ('Activo', 'En Proceso')
       ORDER BY nombre ASC
     `);
-    res.json({ success: true, data: rows });
+      return rows;
+    });
+    res.json({ success: true, data });
   } catch (err) {
     console.error('Error GET /proyectos/activos:', err);
     res.status(500).json({ success: false, message: 'Error al obtener proyectos activos.' });
@@ -192,6 +204,8 @@ router.post('/', async (req, res) => {
       monto_usd        || null,
     ]);
 
+    await invalidateProyectos();
+
     res.status(201).json({
       success: true,
       message: `Proyecto "${nombre_proyecto}" creado exitosamente.`,
@@ -250,6 +264,8 @@ router.put('/:id', async (req, res) => {
       id,
     ]);
 
+    await invalidateProyectos();
+
     res.json({ success: true, message: 'Proyecto actualizado correctamente.' });
   } catch (err) {
     console.error('Error PUT /proyectos/:id:', err);
@@ -282,6 +298,8 @@ router.patch('/:id/estado', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
     }
 
+    await invalidateProyectos();
+
     res.json({ success: true, message: `Estado actualizado a "${estado}".` });
   } catch (err) {
     console.error('Error PATCH /proyectos/:id/estado:', err);
@@ -312,6 +330,8 @@ router.delete('/:id', async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
     }
+
+    await invalidateProyectos();
 
     res.json({ success: true, message: 'Proyecto eliminado correctamente.' });
   } catch (err) {

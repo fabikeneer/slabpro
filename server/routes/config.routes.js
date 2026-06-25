@@ -3,14 +3,14 @@ const router = express.Router();
 const db = require('../db'); // Pool de conexión
 
 const { getOrSetCache, invalidateCache } = require('../utils/cacheUtils');
+const { TTL, PREFIX } = require('../utils/cacheKeys');
 
-const CONFIG_CACHE_KEY = 'configuracion_empresa';
-const CACHE_TTL = 43200; // 12 horas en segundos
+const CONFIG_CACHE_KEY = PREFIX.config;
 
 // GET: Obtener datos
 router.get('/', async (req, res) => {
   try {
-    const configData = await getOrSetCache(CONFIG_CACHE_KEY, CACHE_TTL, async () => {
+    const configData = await getOrSetCache(CONFIG_CACHE_KEY, TTL.CONFIG, async () => {
       const [rows] = await db.query('SELECT * FROM configuracion_empresa LIMIT 1');
       return rows.length > 0 ? rows[0] : null;
     });

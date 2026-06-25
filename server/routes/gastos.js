@@ -2,6 +2,8 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { getOrSetCache, invalidateGastos } = require('../utils/cacheUtils');
+const { TTL, keys } = require('../utils/cacheKeys');
 
 // ── Asegurar que la tabla existe en arranque ─────────────────────────────
 (async () => {
@@ -35,6 +37,12 @@ router.get('/', async (req, res) => {
         const { categoria, inicio, fin } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
+        const cacheQuery = { categoria: categoria || '', inicio: inicio || '', fin: fin || '', page, limit };
+
+        const payload = await getOrSetCache(
+            keys.gastosList(cacheQuery),
+            TTL.LIST,
+            async () => {
         const offset = (page - 1) * limit;
 
         let sql = `
@@ -74,7 +82,6 @@ router.get('/', async (req, res) => {
 
         const [rows] = await db.query(sql, params);
 
-        // Totales por categoría (sin paginación)
         let sqlTotales = `
             SELECT
                 categoria,
@@ -95,7 +102,6 @@ router.get('/', async (req, res) => {
 
         const [totalesCat] = await db.query(sqlTotales, paramsTotales);
 
-        // Total general
         let sqlTotal = `SELECT SUM(monto_usd) AS total_usd, SUM(monto_bs) AS total_bs, COUNT(*) AS total_registros FROM gastos WHERE 1=1`;
         const paramsTotal = [];
         if (inicio) { sqlTotal += ` AND fecha_gasto >= ?`; paramsTotal.push(inicio.split('T')[0]); }
@@ -104,7 +110,7 @@ router.get('/', async (req, res) => {
 
         const totalRegistros = totalGeneral?.total_registros || 0;
 
-        res.json({
+        return {
             success: true,
             gastos: rows,
             totales_por_categoria: totalesCat,
@@ -119,7 +125,11 @@ router.get('/', async (req, res) => {
                 limit,
                 totalPages: Math.ceil(totalRegistros / limit)
             }
-        });
+        };
+            }
+        );
+
+        res.json(payload);
     } catch (error) {
         console.error('Error en GET /gastos:', error);
         res.status(500).json({ success: false, message: 'Error al obtener gastos.' });
@@ -147,6 +157,7 @@ router.post('/', async (req, res) => {
             [id_proyecto || null, categoria, descripcion, monto, monto_bs, tasa, fecha]
         );
 
+        await invalidateGastos();
         res.status(201).json({ success: true, id_gasto: result.insertId });
     } catch (error) {
         console.error('Error en POST /gastos:', error);
@@ -173,6 +184,7 @@ router.put('/:id', async (req, res) => {
             [categoria, descripcion, monto, monto_bs, tasa, id_proyecto || null, fecha_gasto, id]
         );
 
+        await invalidateGastos();
         res.json({ success: true });
     } catch (error) {
         console.error('Error en PUT /gastos/:id:', error);
@@ -184,6 +196,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM gastos WHERE id_gasto = ?', [req.params.id]);
+        await invalidateGastos();
         res.json({ success: true });
     } catch (error) {
         console.error('Error en DELETE /gastos/:id:', error);

@@ -2,6 +2,8 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { getOrSetCache, invalidatePresupuestos, invalidateProyectos } = require('../utils/cacheUtils');
+const { TTL, keys } = require('../utils/cacheKeys');
 
 (async function initDB() {
   try {
@@ -22,12 +24,15 @@ router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
-    const offset = (page - 1) * limit;
 
-    // Obtener total de registros para metadatos
-    const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM presupuestos');
+    const payload = await getOrSetCache(
+      keys.presupuestosList(page, limit),
+      TTL.LIST,
+      async () => {
+        const offset = (page - 1) * limit;
+        const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM presupuestos');
 
-    const [rows] = await db.query(`
+        const [rows] = await db.query(`
       SELECT p.*, p.id_presupuesto AS id, c.nombre AS cliente_nombre, c.rif AS cliente_rif, c.telefono AS cliente_telefono, c.email AS cliente_email, c.direccion AS cliente_direccion
       FROM presupuestos p
       LEFT JOIN clientes c ON p.cliente_id = c.id_cliente
@@ -35,33 +40,36 @@ router.get('/', async (req, res) => {
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 
-    // Cargar todas las líneas en una sola query y agruparlas por presupuesto
-    let lineasPorId = {};
-    if (rows.length > 0) {
-      const ids = rows.map(p => p.id);
-      const [todasLineas] = await db.query(
-        'SELECT * FROM presupuesto_lineas WHERE presupuesto_id IN (?) ORDER BY presupuesto_id, orden ASC',
-        [ids]
-      );
-      for (const linea of todasLineas) {
-        if (!lineasPorId[linea.presupuesto_id]) lineasPorId[linea.presupuesto_id] = [];
-        lineasPorId[linea.presupuesto_id].push(linea);
-      }
-    }
-    for (const presupuesto of rows) {
-      presupuesto.lineas = lineasPorId[presupuesto.id] || [];
-    }
+        let lineasPorId = {};
+        if (rows.length > 0) {
+          const ids = rows.map(p => p.id);
+          const [todasLineas] = await db.query(
+            'SELECT * FROM presupuesto_lineas WHERE presupuesto_id IN (?) ORDER BY presupuesto_id, orden ASC',
+            [ids]
+          );
+          for (const linea of todasLineas) {
+            if (!lineasPorId[linea.presupuesto_id]) lineasPorId[linea.presupuesto_id] = [];
+            lineasPorId[linea.presupuesto_id].push(linea);
+          }
+        }
+        for (const presupuesto of rows) {
+          presupuesto.lineas = lineasPorId[presupuesto.id] || [];
+        }
 
-    res.json({ 
-      success: true, 
-      data: rows,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
+        return {
+          success: true,
+          data: rows,
+          pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          },
+        };
       }
-    });
+    );
+
+    res.json(payload);
   } catch (err) {
     console.error('Error GET /presupuestos:', err);
     res.status(500).json({ success: false, message: 'Error al obtener presupuestos.' });
@@ -229,6 +237,7 @@ router.post('/', async (req, res) => {
     }
 
     await conn.commit();
+    await invalidatePresupuestos();
 
     res.status(201).json({
       success: true,
@@ -348,6 +357,7 @@ router.put('/:id', async (req, res) => {
     }
 
     await conn.commit();
+    await invalidatePresupuestos();
 
     res.json({
       success: true,
@@ -433,6 +443,8 @@ router.patch('/:id/estatus', async (req, res) => {
     }
 
     await conn.commit();
+    await invalidatePresupuestos();
+    if (estatus === 'aprobado') await invalidateProyectos();
 
     res.json({
       success: true,
@@ -469,6 +481,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     await conn.commit();
+    await invalidatePresupuestos();
     res.json({ success: true, message: 'Presupuesto eliminado correctamente.' });
   } catch (err) {
     await conn.rollback();

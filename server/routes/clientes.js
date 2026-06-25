@@ -2,29 +2,32 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { getOrSetCache, invalidateClientes } = require('../utils/cacheUtils');
+const { TTL, keys } = require('../utils/cacheKeys');
 
 // GET /api/clientes — Buscar/listar clientes
 router.get('/', async (req, res) => {
   try {
     const { q } = req.query;
-    let rows;
 
-    if (q) {
-      // Búsqueda por nombre o RIF (útil para autocompletar en el formulario)
-      [rows] = await db.query(
-        `SELECT id, nombre, rif, telefono, email
+    const data = await getOrSetCache(keys.clientesList(q), TTL.LIST, async () => {
+      if (q) {
+        const [rows] = await db.query(
+          `SELECT id, nombre, rif, telefono, email
          FROM clientes
          WHERE nombre LIKE ? OR rif LIKE ?
          ORDER BY nombre ASC LIMIT 20`,
-        [`%${q}%`, `%${q}%`]
-      );
-    } else {
-      [rows] = await db.query(
+          [`%${q}%`, `%${q}%`]
+        );
+        return rows;
+      }
+      const [rows] = await db.query(
         'SELECT id, nombre, rif, telefono, email FROM clientes ORDER BY nombre ASC'
       );
-    }
+      return rows;
+    });
 
-    res.json({ success: true, data: rows });
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al obtener clientes.' });
   }
@@ -33,7 +36,11 @@ router.get('/', async (req, res) => {
 // GET /api/clientes/:id
 router.get('/:id', async (req, res) => {
   try {
-    const [[cliente]] = await db.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
+    const cliente = await getOrSetCache(keys.clienteDetail(req.params.id), TTL.LIST, async () => {
+      const [[row]] = await db.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
+      return row || null;
+    });
+
     if (!cliente) return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     res.json({ success: true, data: cliente });
   } catch (err) {
@@ -52,6 +59,7 @@ router.post('/', async (req, res) => {
       [nombre, rif || null, telefono || null, email || null, direccion || null]
     );
 
+    await invalidateClientes();
     res.status(201).json({ success: true, data: { id: result.insertId, nombre } });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al crear el cliente.' });
@@ -67,6 +75,7 @@ router.put('/:id', async (req, res) => {
        WHERE id = ?`,
       [nombre, rif || null, telefono || null, email || null, direccion || null, req.params.id]
     );
+    await invalidateClientes();
     res.json({ success: true, message: 'Cliente actualizado.' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al actualizar el cliente.' });

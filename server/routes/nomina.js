@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); 
+const db = require('../db');
+const { getOrSetCache, invalidateNomina } = require('../utils/cacheUtils');
+const { TTL, keys } = require('../utils/cacheKeys');
 
 // Sincronizar estructura de empleados y pagos_nomina
 (async () => {
@@ -47,6 +49,7 @@ router.post('/registrar', async (req, res) => {
         await conn.query(sqlGasto, [proyecto_id, categoriaGasto, descripcionGasto, monto_usd, monto_bs_calc, tasa_dia, fecha_pago]);
 
         await conn.commit();
+        await invalidateNomina();
         res.status(201).json({ success: true, message: 'Pago y gasto registrados correctamente' });
     } catch (error) {
         await conn.rollback();
@@ -78,6 +81,7 @@ router.put('/pago/:id', async (req, res) => {
         await conn.query(sqlUpdateNomina, [empleado_id, proyecto_id, monto_usd, tasa_dia, monto_bs, concepto, beneficiario_val, fecha_pago, pagoId]);
 
         await conn.commit();
+        await invalidateNomina();
         res.status(200).json({ success: true, message: 'Pago actualizado correctamente' });
     } catch (error) {
         await conn.rollback();
@@ -92,7 +96,12 @@ router.put('/pago/:id', async (req, res) => {
 router.get('/reporte', async (req, res) => {
     try {
         const { id, inicio, fin } = req.query;
+        const cacheQuery = { id: id || '', inicio: inicio || '', fin: fin || '' };
 
+        const payload = await getOrSetCache(
+            keys.nominaReporte(cacheQuery),
+            TTL.LIST,
+            async () => {
         let sqlResumen = `SELECT SUM(monto_usd) as total_usd, SUM(monto_bs) as total_bs FROM pagos_nomina p WHERE 1=1`;
         let sqlLista = `
             SELECT 
@@ -114,27 +123,27 @@ router.get('/reporte', async (req, res) => {
         }
 
         if (inicio && fin) {
-            // Asumimos que inicio y fin son ISO strings, cortamos a YYYY-MM-DD
             sqlResumen += ` AND p.fecha_pago BETWEEN ? AND ?`;
             sqlLista += ` AND p.fecha_pago BETWEEN ? AND ?`;
             params.push(inicio.split('T')[0], fin.split('T')[0]);
         }
 
-        // Ordenar lista por fecha
         sqlLista += ` ORDER BY p.fecha_pago DESC`;
 
         const [rowsResumen] = await db.query(sqlResumen, params);
-        
-        // Parámetros duplicados para la segunda consulta
         const [rowsLista] = await db.query(sqlLista, params);
-        
-        res.json({
+
+        return {
             resumen: {
                 total_usd: rowsResumen[0].total_usd || 0,
                 total_bs: rowsResumen[0].total_bs || 0
             },
             pagos: rowsLista
-        });
+        };
+            }
+        );
+
+        res.json(payload);
     } catch (error) {
         console.error('Error en GET /nomina/reporte:', error);
         res.status(500).json({ success: false, message: 'Error al obtener el reporte.' });
@@ -144,9 +153,11 @@ router.get('/reporte', async (req, res) => {
 // GET /api/nomina/empleados
 router.get('/empleados', async (req, res) => {
     try {
-        // Solo devolvemos los empleados con estado 'Activo'
-        const [rows] = await db.query("SELECT * FROM empleados WHERE estado = 'Activo' ORDER BY nombre ASC");
-        res.json({ success: true, data: rows });
+        const data = await getOrSetCache(keys.nominaEmpleados(), TTL.ACTIVOS, async () => {
+            const [rows] = await db.query("SELECT * FROM empleados WHERE estado = 'Activo' ORDER BY nombre ASC");
+            return rows;
+        });
+        res.json({ success: true, data });
     } catch (error) {
         console.error('Error obteniendo empleados:', error);
         res.status(500).json({ success: false, message: 'Error al obtener empleados.' });
@@ -161,6 +172,7 @@ router.post('/empleados', async (req, res) => {
             'INSERT INTO empleados (nombre, cedula_rif, telefono, rol) VALUES (?, ?, ?, ?)',
             [nombre, cedula_rif, telefono, rol]
         );
+        await invalidateNomina();
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
         console.error('Error creando empleado:', error);
@@ -176,6 +188,7 @@ router.put('/empleados/:id', async (req, res) => {
             'UPDATE empleados SET nombre = ?, cedula_rif = ?, telefono = ?, rol = ? WHERE id = ?',
             [nombre, cedula_rif, telefono, rol, req.params.id]
         );
+        await invalidateNomina();
         res.json({ success: true });
     } catch (error) {
         console.error('Error actualizando empleado:', error);
@@ -188,6 +201,7 @@ router.delete('/empleados/:id', async (req, res) => {
     try {
         // En lugar de eliminar físicamente, cambiamos el estado a Inactivo (Soft Delete)
         await db.query("UPDATE empleados SET estado = 'Inactivo' WHERE id = ?", [req.params.id]);
+        await invalidateNomina();
         res.json({ success: true });
     } catch (error) {
         console.error('Error eliminando empleado:', error);
@@ -198,7 +212,8 @@ router.delete('/empleados/:id', async (req, res) => {
 // GET /api/nomina/proyectos  — Solo proyectos activos (para dropdown)
 router.get('/proyectos', async (req, res) => {
     try {
-        const [rows] = await db.query(`
+        const rows = await getOrSetCache(keys.nominaProyectos(), TTL.ACTIVOS, async () => {
+            const [data] = await db.query(`
             SELECT
                 id_proyecto  AS id,
                 COALESCE(nombre_proyecto, nombre_cliente, 'Proyecto sin nombre') AS nombre,
@@ -207,6 +222,8 @@ router.get('/proyectos', async (req, res) => {
             WHERE estatus IN ('Activo', 'En Proceso')
             ORDER BY nombre ASC
         `);
+            return data;
+        });
         res.json(rows);
     } catch (error) {
         console.error('Error obteniendo proyectos:', error);

@@ -17,6 +17,8 @@ const configRouter        = require('./routes/config.routes');
 const exchangeRateService = require('./services/exchangeRate');
 const authMiddleware      = require('./middlewares/authMiddleware');
 const ensureUsuariosUnique = require('./migrations/ensureUsuariosUnique');
+const { getOrSetCache, invalidateCache } = require('./utils/cacheUtils');
+const { TTL, keys } = require('./utils/cacheKeys');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -89,11 +91,16 @@ app.use('/api/auth/login', authLimiter);
 // ── Rutas públicas ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   const pool = require('./db');
+  const redisClient = require('./redis');
   const dbOk = pool.isDbConnected && pool.isDbConnected();
+  const redisOk = Boolean(process.env.REDIS_URL?.trim()) && redisClient.isOpen;
   const payload = {
     status: dbOk ? 'ok' : 'degraded',
     server: 'SlabPro API',
     database: dbOk ? 'connected' : 'disconnected',
+    redis: process.env.REDIS_URL?.trim()
+      ? (redisOk ? 'connected' : 'disconnected')
+      : 'disabled',
     timestamp: new Date().toISOString(),
   };
   res.status(200).json(payload);
@@ -110,12 +117,14 @@ app.use('/api/gastos',       authMiddleware, gastosRouter);
 app.use('/api/dashboard',    authMiddleware, dashboardRouter);
 app.use('/api/config',       authMiddleware, configRouter);
 
-app.get('/api/exchange-rate', (req, res) => {
-  res.json(exchangeRateService.getRate());
+app.get('/api/exchange-rate', async (req, res) => {
+  const data = await getOrSetCache(keys.exchangeRate(), TTL.EXCHANGE, async () => exchangeRateService.getRate());
+  res.json(data);
 });
 
 app.post('/api/exchange-rate/force', authMiddleware, async (req, res) => {
   await exchangeRateService.forceUpdate();
+  await invalidateCache(keys.exchangeRate());
   res.json({ success: true, message: 'Actualización completada' });
 });
 
